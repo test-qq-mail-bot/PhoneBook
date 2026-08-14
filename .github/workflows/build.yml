@@ -1,0 +1,97 @@
+name: Build and Release PhoneBook
+
+# 触发：
+#   1) 推送以 v 开头的 tag（如 v20260813-V3）-> 构建并发布到 GitHub Release
+#   2) 手动在 Actions 页面点 Run workflow -> 仅构建，产物作为 artifact 供下载
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            out: PhoneBook
+          - goos: windows
+            goarch: amd64
+            out: PhoneBook.exe
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      # 本项目前端以 base64 内嵌于 frontend_embed.go（go:embed 不可用），
+      # 必须保证它是最新的；若有人改了 frontend/index.html 却忘了重跑
+      # gen_frontend.py，这里会直接报错提醒，避免构建出陈旧前端。
+      - name: Verify frontend embed is up to date
+        run: |
+          python3 gen_frontend.py
+          git diff --exit-code frontend_embed.go \
+            || { echo "::error::frontend/index.html 已修改，但 frontend_embed.go 未重新生成。请本地运行 python gen_frontend.py 并提交后再推送。"; exit 1; }
+
+      # Windows 可执行文件的「详细信息」版本号来自 winres/winres.json，
+      # 需先用 go-winres 编译进 rsrc_windows_amd64.syso。
+      - name: Install go-winres (Windows version resource)
+        if: matrix.goos == 'windows'
+        run: go install github.com/tc-hib/go-winres@latest
+
+      - name: Generate Windows version resource
+        if: matrix.goos == 'windows'
+        run: |
+          export PATH="$PATH:$(go env GOPATH)/bin"
+          go-winres make --arch amd64 --out rsrc
+
+      # 交叉编译。Linux 构建时仓库里虽存在 .syso，但 Go 只对 windows/amd64
+      # 链接该资源，Linux 二进制不受影响。
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -o "${{ matrix.out }}" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.out }}
+          path: ${{ matrix.out }}
+          if-no-files-found: error
+
+  # 仅当推送的是 tag 时才发布 Release；手动 Run workflow 不会走到这里。
+  release:
+    name: Publish to GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/PhoneBook
+            artifacts/PhoneBook.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
