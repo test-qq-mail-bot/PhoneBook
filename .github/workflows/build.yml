@@ -1,16 +1,22 @@
 name: Build and Release PhoneBook
 
 # 触发：
-#   1) 推送以 v 开头的 tag（如 v20260813-V3）-> 构建并发布到 GitHub Release
-#   2) 手动在 Actions 页面点 Run workflow -> 仅构建，产物作为 artifact 供下载
+#   1) 推送代码到 main/master 分支 -> 自动构建最新可执行文件（产物作为 artifact 可下载）
+#   2) 手动在 Actions 页面点 "Run workflow" -> 构建并发布到 GitHub Release（由你点击决定何时发版）
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+      - master
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: '发布到 Release 的标签名（如 v20260813-V3）。留空则自动使用源代码 version.go 里的版本号。'
+        required: false
+        default: ''
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -71,24 +77,39 @@ jobs:
           path: ${{ matrix.out }}
           if-no-files-found: error
 
-  # 仅当推送的是 tag 时才发布 Release；手动 Run workflow 不会走到这里。
+  # 仅当你在 Actions 页面手动点 "Run workflow" 时才发布 Release；
+  # 普通 push 代码只构建、不会自动发版。
   release:
-    name: Publish to GitHub Release
+    name: Publish to GitHub Release (manual)
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: write
+    if: github.event_name == 'workflow_dispatch'
     steps:
+      - name: Checkout (读取 version.go)
+        uses: actions/checkout@v4
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
 
+      - name: Resolve release tag
+        id: tag
+        run: |
+          TAG="${{ github.event.inputs.release_tag }}"
+          if [ -z "$TAG" ]; then
+            # 自动从 version.go 取版本号，形如 20260813-V3 -> v20260813-V3
+            VER=$(grep -oE 'Version = "[^"]+"' version.go | head -1 | sed -E 's/Version = "([^"]+)"/\1/')
+            TAG="v${VER}"
+            echo "从 version.go 取到版本号：$VER"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
           files: |
             artifacts/PhoneBook
             artifacts/PhoneBook.exe
