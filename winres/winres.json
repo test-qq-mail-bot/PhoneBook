@@ -1,0 +1,50 @@
+{
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": {
+        "identity": { "name": "PhoneBook", "version": "2026.8.13.3" },
+        "description": "PhoneBook 轻量级内部电话通讯录",
+        "minimum-os": "win7",
+        "execution-level": "as invoker",
+        "ui-access": false,
+        "auto-elevate": false,
+        "dpi-awareness": "system",
+        "disable-theming": false,
+        "disable-window-filtering": false,
+        "high-resolution-scrolling-aware": false,
+        "ultra-high-resolution-scrolling-aware": false,
+        "long-path-aware": false,
+        "printer-driver-isolation": false,
+        "gdi-scaling": false,
+        "segment-heap": false,
+        "use-common-controls-v6": false
+      }
+    }
+  },
+  "RT_VERSION": {
+    "#1": {
+      "0000": {
+        "fixed": {
+        "file_version": "2026.8.13.3",
+        "product_version": "2026.8.13.3"
+        },
+        "info": {
+          "0409": {
+            "Comments": "PhoneBook 轻量级内部电话通讯录",
+            "CompanyName": "PhoneBook",
+            "FileDescription": "PhoneBook 轻量级内部电话通讯录",
+            "FileVersion": "20260813-V3",
+            "InternalName": "PhoneBook",
+            "LegalCopyright": "Copyright (c) 2026",
+            "LegalTrademarks": "",
+            "OriginalFilename": "PhoneBook.exe",
+            "PrivateBuild": "",
+            "ProductName": "PhoneBook",
+            "ProductVersion": "20260813-V3",
+            "SpecialBuild": ""
+          }
+        }
+      }
+    }
+  }
+}

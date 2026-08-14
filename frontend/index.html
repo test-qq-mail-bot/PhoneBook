@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PhoneBook 通讯录</title>
+<style>
+  :root {
+    --primary: #4f6ef7;
+    --primary-hover: #3b5ce4;
+    --primary-light: #eef1fe;
+    --text: #1a1a2e;
+    --text-secondary: #5c5c7a;
+    --text-muted: #8e8ea0;
+    --border: #e2e4eb;
+    --border-light: #eef0f5;
+    --bg: #f3f4f8;
+    --card: #ffffff;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 20px rgba(0,0,0,0.10);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-xs: 4px;
+    --danger: #e04d4d;
+    --danger-bg: #fef2f2;
+    --warning: #d4940a;
+    --warning-bg: #fff9e6;
+    --success: #2a9d6b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "SF Pro Text", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .pb-app { max-width: 1200px; margin: 24px auto; padding: 0 16px 32px; }
+
+  .pb-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, #4f6ef7 0%, #6c63ff 100%);
+    color: #fff; padding: 20px 24px; border-radius: var(--radius) var(--radius) 0 0;
+    box-shadow: 0 2px 8px rgba(79,110,247,0.30);
+  }
+  .pb-header-left { display: flex; align-items: center; gap: 12px; }
+  .pb-header-icon {
+    width: 36px; height: 36px; background: rgba(255,255,255,0.20);
+    border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700;
+  }
+  .pb-header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .pb-header-help-btn {
+    background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.25);
+    padding: 7px 18px; border-radius: var(--radius-xs); cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: all 0.15s;
+  }
+  .pb-header-help-btn:hover { background: rgba(255,255,255,0.30); }
+
+  .pb-error-panel {
+    background: var(--danger-bg); border: 1px solid #f5c6cb; color: #a52727;
+    padding: 14px 20px; margin-top: 0; border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .pb-error-title { font-weight: 600; margin-bottom: 6px; font-size: 13px; }
+  .pb-error-item { margin: 3px 0; font-size: 13px; line-height: 1.6; }
+
+  /* 文件缺失提示条 */
+  .pb-missing-panel {
+    background: var(--warning-bg); border: 1px solid #f0e2bf; color: #8a6d1b;
+    padding: 14px 20px; font-size: 13.5px; border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .pb-missing-panel b { color: #6b5410; }
+
+  /* 连接错误提示条（证书不被信任等） */
+  .pb-connerr-panel {
+    background: var(--danger-bg); border: 1px solid #f0c2c2; color: #a52727;
+    padding: 16px 20px; margin-top: 16px; border-radius: var(--radius); font-size: 13.5px; line-height: 1.7;
+  }
+  .pb-connerr-panel code {
+    background: #fff; padding: 1px 6px; border-radius: 3px; font-size: 12.5px;
+    border: 1px solid #f0c2c2;
+  }
+
+  .pb-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+
+  .pb-toolbar {
+    display: flex; gap: 10px; align-items: center; padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light); flex-wrap: wrap;
+  }
+  .pb-toolbar-search {
+    flex: 1; min-width: 200px; padding: 9px 14px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13.5px; color: var(--text); background: var(--bg);
+    transition: border-color 0.15s, box-shadow 0.15s; outline: none;
+  }
+  .pb-toolbar-search:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); background: #fff; }
+  .pb-toolbar-search::placeholder { color: var(--text-muted); }
+
+  .pb-btn {
+    padding: 9px 18px; border: 1px solid var(--primary); background: var(--primary); color: #fff;
+    border-radius: var(--radius-xs); cursor: pointer; font-size: 13px; font-weight: 500;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .pb-btn:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 2px 6px rgba(79,110,247,0.25); }
+  .pb-btn:active { transform: translateY(0); }
+  .pb-btn:disabled { background: #c8cad0; border-color: #c8cad0; cursor: not-allowed; transform: none; box-shadow: none; }
+  .pb-btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--border); }
+  .pb-btn-outline:hover { background: var(--primary-bg); border-color: var(--primary); }
+  .pb-btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  .pb-table-wrapper { overflow-x: auto; }
+  .pb-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .pb-table-head-cell {
+    background: #f8f9fc; text-align: left; padding: 10px 16px;
+    border-bottom: 2px solid var(--border); user-select: none; white-space: nowrap;
+    font-size: 12.5px; font-weight: 600; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.4px; transition: background 0.15s;
+  }
+  .pb-table-head-cell:hover { background: #eff1f6; }
+  .pb-col-head-wrap { display: flex; align-items: center; gap: 8px; }
+  .pb-col-filter-btn {
+    border: 1px solid var(--border); background: #fff; color: var(--text-muted);
+    border-radius: var(--radius-xs); cursor: pointer; font-size: 11px; font-weight: 500;
+    padding: 2px 8px; transition: all 0.15s;
+  }
+  .pb-col-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .pb-col-filter-btn.pb-active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .pb-table-sort-icon { color: var(--primary); margin-left: 2px; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .pb-table-row { transition: background 0.1s; }
+  .pb-table-row:hover { background: var(--primary-bg) !important; }
+  .pb-table-cell {
+    padding: 11px 16px; border-bottom: 1px solid var(--border-light);
+    max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 13.5px; color: var(--text);
+  }
+  .pb-table-edit-btn {
+    padding: 5px 14px; border: 1px solid var(--primary); background: #fff; color: var(--primary);
+    border-radius: var(--radius-xs); cursor: pointer; font-size: 12.5px; font-weight: 500; transition: all 0.15s;
+  }
+  .pb-table-edit-btn:hover { background: var(--primary); color: #fff; }
+
+  .pb-pagination {
+    display: flex; gap: 10px; align-items: center; padding: 14px 20px;
+    border-top: 1px solid var(--border-light); flex-wrap: wrap; background: #fafbfd;
+  }
+  .pb-pagination-btn {
+    padding: 7px 16px; border: 1px solid var(--border); background: #fff; color: var(--text);
+    border-radius: var(--radius-xs); cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s;
+  }
+  .pb-pagination-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+  .pb-pagination-btn:disabled { background: #f0f1f3; color: var(--text-muted); cursor: not-allowed; border-color: #eee; }
+  .pb-pagination-info { color: var(--text-muted); font-size: 13px; }
+  .pb-pagination-page { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+  .pb-pagination-size-select {
+    padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs);
+    font-size: 13px; color: var(--text); background: #fff; cursor: pointer;
+  }
+
+  .pb-footer {
+    padding: 12px 20px; background: var(--warning-bg); border-top: 1px solid #f0e2bf;
+    color: #8a6d1b; font-size: 12.5px; border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  .pb-empty-tip { padding: 48px 20px; text-align: center; color: var(--text-muted); font-size: 14px; }
+
+  .pb-modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none;
+    align-items: flex-start; justify-content: center; padding-top: 80px; z-index: 100; backdrop-filter: blur(2px);
+  }
+  .pb-modal-mask.pb-show { display: flex; }
+  .pb-modal-edit, .pb-modal-help, .pb-modal-filter {
+    background: var(--card); border-radius: var(--radius); width: 520px; max-width: 92vw;
+    max-height: 84vh; overflow: auto; padding: 24px 28px; box-shadow: var(--shadow-md);
+    animation: pbModalIn 0.2s ease-out;
+  }
+  @keyframes pbModalIn { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+  .pb-modal-edit-form { display: grid; gap: 14px; margin: 16px 0; }
+  .pb-modal-edit-field { display: flex; flex-direction: column; gap: 5px; }
+  .pb-modal-edit-field label { font-weight: 600; color: var(--text-secondary); font-size: 13px; }
+  .pb-modal-edit-field input {
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-xs);
+    font-size: 14px; color: var(--text); transition: border-color 0.15s, box-shadow 0.15s; outline: none; background: #fafbfd;
+  }
+  .pb-modal-edit-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); background: #fff; }
+  .pb-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+  .pb-modal-title { font-size: 17px; font-weight: 700; margin: 0 0 4px; color: var(--text); }
+
+  /* 列筛选弹框 */
+  .pb-filter-options { display: grid; gap: 8px; margin: 16px 0; max-height: 50vh; overflow: auto; }
+  .pb-filter-opt { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text); cursor: pointer; padding: 4px 6px; border-radius: var(--radius-xs); }
+  .pb-filter-opt:hover { background: var(--primary-bg); }
+  .pb-filter-opt input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+  .pb-filter-opt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pb-filter-toolbar { margin: 12px 0 4px; }
+  .pb-filter-search {
+    width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 13px;
+    border: 1px solid var(--border); border-radius: var(--radius-xs); outline: none;
+    transition: border-color 0.15s;
+  }
+  .pb-filter-search:focus { border-color: var(--primary); }
+  .pb-filter-links { display: flex; gap: 14px; margin-top: 10px; font-size: 12.5px; }
+  .pb-filter-links a {
+    color: var(--primary); cursor: pointer; text-decoration: none; font-weight: 500;
+    border-bottom: 1px dashed transparent; transition: border-color 0.15s;
+  }
+  .pb-filter-links a:hover { border-bottom-color: var(--primary); }
+  .pb-filter-count { color: var(--text-muted); font-size: 12px; }
+
+  .pb-modal-help-content { line-height: 1.75; color: var(--text-secondary); font-size: 13.5px; }
+  .pb-modal-help-content h3 { margin: 16px 0 6px; color: var(--primary); font-size: 15px; }
+  .pb-modal-help-content h3:first-child { margin-top: 4px; }
+  .pb-modal-help-content p { margin: 0 0 8px; }
+  .pb-modal-help-content code {
+    background: var(--primary-bg); padding: 2px 7px; border-radius: 3px; font-size: 12.5px;
+    color: var(--primary); font-family: "Cascadia Code", "Consolas", monospace;
+  }
+
+  @media (max-width: 768px) {
+    .pb-app { margin: 12px auto; padding: 0 8px 20px; }
+    .pb-header { padding: 16px 18px; }
+    .pb-header-title { font-size: 17px; }
+    .pb-toolbar, .pb-pagination { padding: 12px 14px; }
+    .pb-table-cell, .pb-table-head-cell { padding: 9px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="pb-app">
+  <div class="pb-header">
+    <div class="pb-header-left">
+      <div class="pb-header-icon">P</div>
+      <span class="pb-header-title">PhoneBook 通讯录</span>
+    </div>
+    <button class="pb-header-help-btn" id="helpBtn">帮助</button>
+  </div>
+
+  <div class="pb-error-panel" id="errorPanel" style="display:none;">
+    <div class="pb-error-title">警告：contacts.yaml 解析失败，请管理员修复以下位置：</div>
+    <div id="errorList"></div>
+  </div>
+
+  <div class="pb-missing-panel" id="missingPanel" style="display:none;">
+    提示：<b>contacts.yaml 文件不存在</b>。您可以先点「新增联系人」录入数据，再点「导出 YAML」生成该文件；或直接导入一份合法的 contacts.yaml。当前表格为空。
+  </div>
+
+  <div class="pb-card">
+    <div class="pb-toolbar">
+      <input class="pb-toolbar-search" id="searchInput" placeholder="搜索（跨所有字段实时过滤）...">
+      <button class="pb-btn" id="importBtn">导入 YAML</button>
+      <button class="pb-btn pb-btn-outline" id="exportBtn">导出 YAML</button>
+      <button class="pb-btn" id="addBtn">新增联系人</button>
+      <input type="file" id="importFile" accept=".yaml,.yml" style="display:none;">
+    </div>
+
+    <div class="pb-table-wrapper">
+      <table class="pb-table">
+        <thead><tr class="pb-table-head" id="tableHead"></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="pb-empty-tip" id="emptyTip" style="display:none;">暂无数据</div>
+    </div>
+
+    <div class="pb-pagination">
+      <button class="pb-pagination-btn" id="prevBtn">上一页</button>
+      <span class="pb-pagination-page" id="pageInfo"></span>
+      <button class="pb-pagination-btn" id="nextBtn">下一页</button>
+      <span class="pb-pagination-info" id="totalInfo"></span>
+      <label style="margin-left:auto; font-size:13px; color:var(--text-secondary);">
+        每页
+        <select class="pb-pagination-size-select" id="pageSize">
+          <option>10</option><option selected>20</option><option>30</option><option>50</option><option>100</option>
+        </select> 条
+      </label>
+    </div>
+  </div>
+
+  <div class="pb-footer">
+    本地修改不会保存，刷新页面将恢复服务器数据。如需永久修改，请导出 YAML 文件并联系管理员。
+  </div>
+</div>
+
+<!-- 编辑/新增弹窗 -->
+<div class="pb-modal-mask" id="editMask">
+  <div class="pb-modal-edit">
+    <div class="pb-modal-title" id="editTitle">编辑联系人</div>
+    <form class="pb-modal-edit-form" id="editForm"></form>
+    <div class="pb-modal-actions">
+      <button class="pb-btn pb-btn-outline" id="editCancel">取消</button>
+      <button class="pb-btn" id="editSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 列筛选弹窗 -->
+<div class="pb-modal-mask" id="filterModal">
+  <div class="pb-modal-filter">
+    <div class="pb-modal-title" id="filterModalTitle">筛选</div>
+    <div class="pb-filter-toolbar">
+      <input type="text" id="filterSearch" class="pb-filter-search" placeholder="包含任一关键字，空格分隔" />
+      <div class="pb-filter-links">
+        <a id="flAll">全选</a>
+        <a id="flInv">反选</a>
+        <a id="flDup">重复项</a>
+        <a id="flUni">唯一项</a>
+      </div>
+    </div>
+    <div class="pb-filter-options" id="filterOptions"></div>
+    <div class="pb-modal-actions">
+      <button class="pb-btn pb-btn-outline" id="filterCancel">取消</button>
+      <button class="pb-btn" id="filterApply">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 帮助弹窗 -->
+<div class="pb-modal-mask" id="helpMask">
+  <div class="pb-modal-help">
+    <div class="pb-modal-title">PhoneBook 使用帮助</div>
+    <div class="pb-modal-help-content" id="helpContent"></div>
+    <div class="pb-modal-actions">
+      <button class="pb-btn" id="helpClose">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function () {
+  var state = {
+    config: null,
+    contacts: [],
+    errors: [],
+    status: "ok",
+    search: "",
+    sortKey: null,
+    sortDir: "none",
+    filters: {},
+    filterKey: null,
+    page: 1,
+    pageSize: 20,
+    dirty: false,
+    editIndex: -1
+  };
+
+  function dbg(msg) {
+    if (state.config && state.config.debug) { console.log("[PB-DEBUG] " + msg); }
+  }
+  function setDirty(v) {
+    if (state.dirty !== v) { state.dirty = v; dbg("dirty 状态变更：" + (!v) + " -> " + v); }
+  }
+  function $(id) { return document.getElementById(id); }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // ---------- 初始化 ----------
+  function init() {
+    fetch("/api/data").then(function (r) { return r.json(); }).then(function (data) {
+      state.config = data.config;
+      state.status = data.status;
+      state.contacts = data.contacts || [];
+      state.errors = data.errors || [];
+      dbg("数据加载完成，共 " + state.contacts.length + " 条联系人");
+      dbg("字段定义：" + JSON.stringify(state.config.fields));
+      if (state.status === "error") {
+        showErrorPanel();
+        setToolbarDisabled(true);
+        renderEmpty();
+      } else if (state.status === "missing") {
+        // 文件不存在：提示但保留新增/导出/导入可用
+        $("missingPanel").style.display = "block";
+        render();
+      } else {
+        render();
+      }
+    }).catch(function (e) {
+      // 证书不被信任等导致 fetch 失败：在控制台说明正常并给出修复步骤
+      console.error("[PB-ERROR] 加载 /api/data 失败:", e);
+      var msg = "无法连接服务器。若浏览器提示「证书不安全」，这是自签证书的正常现象，" +
+        "并非程序故障：请在地址栏点击「高级」->「继续前往（不安全）」后再刷新本页面。" +
+        "如需彻底消除提示，可将 certs/server.crt 导入系统/浏览器信任库，或在 config.yaml 中将 https_enabled 改为 false 走 HTTP。";
+      console.warn("[PB-NOTICE] " + msg);
+      showConnError(msg);
+    });
+  }
+
+  function showConnError(msg) {
+    var div = document.createElement("div");
+    div.className = "pb-connerr-panel";
+    div.innerHTML = "<b>连接失败</b><br>" + escapeHtml(msg);
+    var app = $("errorPanel").parentNode;
+    app.insertBefore(div, app.firstChild.nextSibling);
+  }
+
+  function showErrorPanel() {
+    $("errorPanel").style.display = "block";
+    var html = "";
+    state.errors.forEach(function (e) {
+      var where = e.line > 0 ? ("第" + e.line + "行：") : "";
+      html += '<div class="pb-error-item">' + escapeHtml(where + e.message) + '</div>';
+    });
+    $("errorList").innerHTML = html;
+  }
+  function setToolbarDisabled(d) {
+    ["importBtn", "exportBtn", "addBtn"].forEach(function (id) { $(id).disabled = d; });
+    $("searchInput").disabled = d;
+  }
+  function renderEmpty() {
+    $("tableHead").innerHTML = "";
+    $("tableBody").innerHTML = "";
+    $("emptyTip").style.display = "block";
+    updatePagination(0);
+  }
+
+  // ---------- 表头（动态 + 列筛选按钮） ----------
+  function renderHead() {
+    var head = $("tableHead");
+    head.innerHTML = "";
+    state.config.fields.forEach(function (f) {
+      var th = document.createElement("th");
+      th.className = "pb-table-head-cell";
+      th.setAttribute("data-key", f.key);
+      var wrap = document.createElement("div");
+      wrap.className = "pb-col-head-wrap";
+      var label = document.createElement("span");
+      label.textContent = f.label;
+      label.style.cursor = "pointer";
+      label.addEventListener("click", function () { onSort(f.key); });
+      var sortIcon = "";
+      if (state.sortKey === f.key) {
+        sortIcon = state.sortDir === "asc" ? " ↑" : (state.sortDir === "desc" ? " ↓" : "");
+      }
+      var sortSpan = document.createElement("span");
+      sortSpan.className = "pb-table-sort-icon";
+      sortSpan.textContent = sortIcon;
+      sortSpan.addEventListener("click", function (e) { e.stopPropagation(); onSort(f.key); });
+      var filterBtn = document.createElement("button");
+      filterBtn.className = "pb-col-filter-btn" + (state.filters[f.key] && state.filters[f.key].length ? " pb-active" : "");
+      filterBtn.textContent = "筛选";
+      filterBtn.addEventListener("click", function (e) { e.stopPropagation(); openFilterModal(f.key); });
+      wrap.appendChild(label);
+      wrap.appendChild(sortSpan);
+      wrap.appendChild(filterBtn);
+      th.appendChild(wrap);
+      head.appendChild(th);
+    });
+    var thOp = document.createElement("th");
+    thOp.className = "pb-table-head-cell";
+    thOp.textContent = "操作";
+    head.appendChild(thOp);
+  }
+
+  // ---------- 列筛选弹框 ----------
+  function openFilterModal(key) {
+    state.filterKey = key;
+    var field = state.config.fields.filter(function (f) { return f.key === key; })[0];
+    $("filterModalTitle").textContent = "筛选：" + field.label;
+    var opts = $("filterOptions");
+    opts.innerHTML = "";
+    var selected = state.filters[key] || [];
+    var counts = valueCounts(key);
+    var values = Object.keys(counts).sort();
+
+    values.forEach(function (v) {
+      var lab = document.createElement("label");
+      lab.className = "pb-filter-opt";
+      lab.setAttribute("data-val", v);
+      var inp = document.createElement("input");
+      inp.type = "checkbox"; inp.className = "opt";
+      inp.value = v;
+      inp.checked = selected.indexOf(v) !== -1;
+      var span = document.createElement("span");
+      var cnt = counts[v];
+      span.textContent = (v === "" ? "(空)" : v) + (cnt > 1 ? " (" + cnt + ")" : "");
+      lab.appendChild(inp); lab.appendChild(span);
+      opts.appendChild(lab);
+    });
+
+    // 关键字搜索：实时过滤可见项；隐藏项同时取消勾选，避免误提交
+    var search = $("filterSearch");
+    search.value = "";
+    search.oninput = function () {
+      var kws = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      Array.prototype.forEach.call(opts.querySelectorAll(".pb-filter-opt"), function (lab) {
+        var raw = lab.getAttribute("data-val") || "";
+        var hit = kws.length === 0 || kws.some(function (k) { return raw.toLowerCase().indexOf(k) !== -1; });
+        lab.style.display = hit ? "" : "none";
+        if (!hit) { var cb = lab.querySelector("input.opt"); if (cb) cb.checked = false; }
+      });
+    };
+
+    // 工具栏：全选 / 反选 / 重复项 / 唯一项（仅作用于可见项）
+    function visibleBoxes() {
+      return Array.prototype.filter.call(opts.querySelectorAll(".pb-filter-opt"), function (lab) {
+        return lab.style.display !== "none";
+      }).map(function (lab) { return lab.querySelector("input.opt"); });
+    }
+    $("flAll").onclick = function () { visibleBoxes().forEach(function (cb) { cb.checked = true; }); };
+    $("flInv").onclick = function () { visibleBoxes().forEach(function (cb) { cb.checked = !cb.checked; }); };
+    $("flDup").onclick = function () { visibleBoxes().forEach(function (cb) { cb.checked = counts[cb.value] > 1; }); };
+    $("flUni").onclick = function () { visibleBoxes().forEach(function (cb) { cb.checked = counts[cb.value] === 1; }); };
+
+    $("filterModal").classList.add("pb-show");
+  }
+  function applyFilter() {
+    var key = state.filterKey;
+    var checked = [];
+    Array.prototype.forEach.call($("filterOptions").querySelectorAll("input.opt"), function (inp) {
+      if (inp.checked) checked.push(inp.value);
+    });
+    if (checked.length === 0) {
+      delete state.filters[key];
+    } else {
+      state.filters[key] = checked;
+    }
+    state.page = 1;
+    dbg("列筛选：" + key + " = [" + checked.join(", ") + "]，结果 " + currentRows().length + " 条");
+    $("filterModal").classList.remove("pb-show");
+    render();
+  }
+  function valueCounts(key) {
+    var m = {};
+    state.contacts.forEach(function (c) {
+      var v = c[key] == null ? "" : String(c[key]);
+      m[v] = (m[v] || 0) + 1;
+    });
+    return m;
+  }
+
+  // ---------- 数据处理流水线 ----------
+  function currentRows() {
+    var rows = state.contacts;
+    if (state.search) {
+      var q = state.search.toLowerCase();
+      rows = rows.filter(function (c) {
+        return state.config.fields.some(function (f) {
+          return String(c[f.key] == null ? "" : c[f.key]).toLowerCase().indexOf(q) !== -1;
+        });
+      });
+    }
+    Object.keys(state.filters).forEach(function (k) {
+      var v = state.filters[k];
+      if (v && v.length) {
+        rows = rows.filter(function (c) { return v.indexOf(String(c[k] == null ? "" : c[k])) !== -1; });
+      }
+    });
+    if (state.sortKey && state.sortDir !== "none") {
+      var key = state.sortKey, dir = state.sortDir === "asc" ? 1 : -1;
+      rows = rows.slice().sort(function (a, b) {
+        var av = String(a[key] == null ? "" : a[key]), bv = String(b[key] == null ? "" : b[key]);
+        return av.localeCompare(bv, "zh-Hans-CN") * dir;
+      });
+    }
+    return rows;
+  }
+
+  function onSort(key) {
+    if (state.sortKey !== key) { state.sortKey = key; state.sortDir = "asc"; }
+    else if (state.sortDir === "asc") { state.sortDir = "desc"; }
+    else if (state.sortDir === "desc") { state.sortDir = "none"; state.sortKey = null; }
+    else { state.sortDir = "asc"; }
+    dbg("排序：字段 " + key + "，方向 " + state.sortDir);
+    render();
+  }
+
+  // ---------- 表格渲染 ----------
+  function render() {
+    renderHead();
+    var rows = currentRows();
+    var total = rows.length;
+    var pages = Math.max(1, Math.ceil(total / state.pageSize));
+    if (state.page > pages) state.page = pages;
+    if (state.page < 1) state.page = 1;
+    var start = (state.page - 1) * state.pageSize;
+    var pageRows = rows.slice(start, start + state.pageSize);
+
+    var body = $("tableBody");
+    body.innerHTML = "";
+    if (total === 0) {
+      $("emptyTip").style.display = "block";
+    } else {
+      $("emptyTip").style.display = "none";
+      pageRows.forEach(function (c) {
+        var tr = document.createElement("tr");
+        tr.className = "pb-table-row";
+        // demands 4: 字段容错——缺字段显示空白值，可编辑
+        state.config.fields.forEach(function (f) {
+          var td = document.createElement("td");
+          td.className = "pb-table-cell";
+          td.textContent = c[f.key] == null ? "" : c[f.key];
+          tr.appendChild(td);
+        });
+        var tdOp = document.createElement("td");
+        tdOp.className = "pb-table-cell";
+        var btn = document.createElement("button");
+        btn.className = "pb-table-edit-btn";
+        btn.textContent = "编辑";
+        btn.addEventListener("click", function () { openEdit(c); });
+        tdOp.appendChild(btn);
+        tr.appendChild(tdOp);
+        body.appendChild(tr);
+      });
+    }
+    updatePagination(total);
+  }
+
+  function updatePagination(total) {
+    var pages = Math.max(1, Math.ceil(total / state.pageSize));
+    $("pageInfo").textContent = "第 " + state.page + " 页 / 共 " + pages + " 页";
+    $("totalInfo").textContent = "共 " + total + " 条记录";
+    $("prevBtn").disabled = state.page <= 1;
+    $("nextBtn").disabled = state.page >= pages;
+  }
+
+  // ---------- 编辑 / 新增 ----------
+  function openEdit(contact) {
+    state.editIndex = state.contacts.indexOf(contact);
+    $("editTitle").textContent = "编辑联系人";
+    buildEditForm(contact);
+    $("editMask").classList.add("pb-show");
+  }
+  function openAdd() {
+    state.editIndex = -1;
+    $("editTitle").textContent = "新增联系人";
+    var blank = {};
+    state.config.fields.forEach(function (f) { blank[f.key] = ""; });
+    buildEditForm(blank);
+    $("editMask").classList.add("pb-show");
+  }
+  function buildEditForm(contact) {
+    var form = $("editForm");
+    form.innerHTML = "";
+    state.config.fields.forEach(function (f) {
+      var wrap = document.createElement("div");
+      wrap.className = "pb-modal-edit-field";
+      var label = document.createElement("label");
+      label.textContent = f.label + "（最多 " + f.maxlen + " 字符）";
+      var input = document.createElement("input");
+      input.type = "text";
+      input.maxLength = f.maxlen;
+      input.value = contact[f.key] == null ? "" : contact[f.key];
+      input.setAttribute("data-key", f.key);
+      input.placeholder = "请输入" + f.label;
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+      form.appendChild(wrap);
+    });
+  }
+  function saveEdit() {
+    var inputs = $("editForm").querySelectorAll("input");
+    var obj = {};
+    inputs.forEach(function (inp) { obj[inp.getAttribute("data-key")] = inp.value; });
+    if (state.editIndex >= 0) {
+      state.contacts[state.editIndex] = obj;
+      dbg("编辑联系人：" + (obj.phone_id || ""));
+    } else {
+      state.contacts.push(obj);
+      dbg("新增联系人：" + (obj.phone_id || ""));
+    }
+    setDirty(true);
+    $("editMask").classList.remove("pb-show");
+    render();
+  }
+
+  // ---------- 导入 YAML ----------
+  function importYAML(text) {
+    if (text.indexOf("contacts:") === -1) { alert("文件缺少 contacts 字段"); return false; }
+    var parsed = parseContactsYAML(text);
+    if (parsed.error) { alert("YAML 解析失败：" + parsed.error); return false; }
+    var fields = state.config.fields;
+    var fieldKeys = fields.map(function (f) { return f.key; });
+    for (var i = 0; i < parsed.contacts.length; i++) {
+      var c = parsed.contacts[i];
+      var keys = Object.keys(c);
+      fieldKeys.forEach(function (k) { if (!(k in c)) { alert("第 " + (i + 1) + " 条联系人缺少字段 '" + k + "'"); return false; } });
+      keys.forEach(function (k) { if (fieldKeys.indexOf(k) === -1) { alert("第 " + (i + 1) + " 条联系人包含未知字段 '" + k + "'"); return false; } });
+      fields.forEach(function (f) {
+        var v = c[f.key] == null ? "" : String(c[f.key]);
+        if (v.length > f.maxlen) { alert("第 " + (i + 1) + " 条，字段 " + f.key + " 超出最大长度（当前 " + v.length + " 字符，最大 " + f.maxlen + " 字符）"); return false; }
+      });
+    }
+    state.contacts = parsed.contacts;
+    state.filters = {};
+    state.page = 1;
+    setDirty(true);
+    dbg("导入 YAML：解析成功，共 " + parsed.contacts.length + " 条");
+    render();
+    return true;
+  }
+
+  function parseContactsYAML(text) {
+    var lines = text.split(/\r?\n/);
+    var contacts = [];
+    var cur = null;
+    var started = false;
+    function pushCur() { if (cur) { contacts.push(cur); cur = null; } }
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var trimmed = line.replace(/\s+$/, "");
+      if (trimmed === "" || trimmed.indexOf("#") === 0) continue;
+      if (!started) { if (/^\s*contacts\s*:/.test(trimmed)) { started = true; } continue; }
+      var dash = trimmed.match(/^\s*-\s+(.*)$/);
+      if (dash) {
+        pushCur(); cur = {};
+        var after = dash[1];
+        var kv = after.match(/^(\S+?)\s*:\s*(.*)$/);
+        if (kv) { cur[kv[1]] = unquote(kv[2]); }
+        continue;
+      }
+      var kv2 = trimmed.match(/^\s+(\S+?)\s*:\s*(.*)$/);
+      if (kv2 && cur) { cur[kv2[1]] = unquote(kv2[2]); continue; }
+    }
+    pushCur();
+    if (contacts.length === 0) { return { error: "未解析到任何联系人，请检查 YAML 格式" }; }
+    return { contacts: contacts };
+  }
+  function unquote(s) {
+    s = (s == null ? "" : String(s)).trim();
+    if (s.length >= 2 && (s[0] === '"' && s[s.length - 1] === '"' || s[0] === "'" && s[s.length - 1] === "'")) { return s.slice(1, -1); }
+    return s;
+  }
+
+  // ---------- 导出 YAML（需求4：自动补全缺失字段） ----------
+  function exportYAML() {
+    var header = [
+      "# ============================================================",
+      "# PhoneBook 通讯录数据文件",
+      "# ============================================================",
+      "# 使用说明：",
+      "#   1. 每行一个联系人，以 \"  - \" 开头（两个空格 + 短横线 + 空格）",
+      "#   2. 字段名称必须与 config.yaml 中 fields 定义的 key 完全一致",
+      "#   3. 值建议用双引号包裹，避免特殊字符导致解析错误",
+      "#   4. 每个字段的值不得超过 config.yaml 中定义的 maxlen 字符数",
+      "#   5. 修改完成后保存此文件，替换服务器上的同名文件即可",
+      "#   6. 请勿修改本注释区域",
+      "# ============================================================",
+      "# 字段说明："
+    ];
+    state.config.fields.forEach(function (f) {
+      header.push("#   " + f.key + "       - " + f.label + "（最多" + f.maxlen + "字符）");
+    });
+    header.push("# ============================================================");
+    header.push("");
+    header.push("contacts:");
+    var body = [];
+    state.contacts.forEach(function (c) {
+      // 遍历 config 全部字段，确保缺失字段以空白值补全写出
+      state.config.fields.forEach(function (f, idx) {
+        var v = c[f.key] == null ? "" : String(c[f.key]);
+        v = v.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        var prefix = idx === 0 ? "  - " : "    ";
+        body.push(prefix + f.key + ': "' + v + '"');
+      });
+    });
+    var content = header.concat(body).join("\n") + "\n";
+    var blob = new Blob([content], { type: "text/yaml;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "contacts.yaml";
+    a.click();
+    dbg("导出 YAML：共 " + state.contacts.length + " 条数据");
+  }
+
+  // ---------- 帮助文档（含证书说明） ----------
+  function loadHelp() {
+    var c = [
+      "<h3>1. 软件简介</h3><p>PhoneBook 是轻量级内部电话通讯录，服务器只提供只读数据，所有编辑在浏览器内存中完成，刷新即恢复。</p>",
+      "<h3>2. 查看通讯录</h3><p>页面加载后表格展示全部联系人，下方分页可翻页。</p>",
+      "<h3>3. 搜索</h3><p>在搜索框输入关键字，实时跨所有字段过滤，不区分大小写。</p>",
+      "<h3>4. 排序</h3><p>点击表头列名在 升序 / 降序 / 取消 之间循环切换。</p>",
+      "<h3>5. 列筛选</h3><p>点击表头列的「筛选」按钮打开弹框：顶部输入关键字可实时过滤选项；工具栏「全选 / 反选 / 重复项 / 唯一项」可快速勾选（重复项=本列出现多次的值，唯一项=仅出现一次的值）；勾选要保留的值后点「确定」即按该列过滤，「取消」关闭。清空筛选可先「全选」再「确定」。</p>",
+      "<h3>6. 分页</h3><p>每页条数可选 10/20/30/50/100，切换后跳回第 1 页。</p>",
+      "<h3>7. 编辑</h3><p>点「编辑」修改联系人，仅本地生效；点「新增联系人」添加一条。</p>",
+      "<h3>8. 导入 / 导出 YAML</h3><p>导出当前数据为标准 contacts.yaml（缺失字段自动以空白值补全）；导入合法文件替换内存数据。导入会校验格式与长度。</p>",
+      "<h3>9. 重要提醒</h3><p>本地修改不会保存，刷新即恢复服务器数据；永久修改需导出后联系管理员替换服务器文件。</p>",
+      "<h3>10. YAML 格式说明</h3><p>每行一个联系人，字段名与 config.yaml 的 fields.key 一致，值建议双引号包裹，长度不超过 maxlen。</p>",
+      "<h3>11. 证书警告（正常现象）</h3><p>浏览器访问时若提示「证书不安全 / 您的连接不是私密连接」，这是<b>自签证书的正常现象</b>，并非程序故障。处理方式：点击「高级」→「继续前往（不安全）」即可正常使用。</p>",
+      "<p>彻底消除提示的两种方法：① 将 <code>certs/server.crt</code> 导入系统/浏览器信任库；② 在 <code>config.yaml</code> 将 <code>https_enabled</code> 改为 <code>false</code> 走 HTTP 明文（仅限内网可信环境）。</p>",
+      "<h3>12. contacts.yaml 不存在</h3><p>若文件不存在，页面会提示。您可先「新增联系人」录入，再「导出 YAML」生成该文件，或直接「导入」一份合法文件，即可修复。</p>"
+    ].join("");
+    $("helpContent").innerHTML = c;
+  }
+
+  // ---------- 事件绑定 ----------
+  $("searchInput").addEventListener("input", function (e) {
+    state.search = e.target.value; state.page = 1; dbg("搜索：" + JSON.stringify(state.search) + "，命中 " + currentRows().length + " 条"); render();
+  });
+  $("importBtn").addEventListener("click", function () { $("importFile").click(); });
+  $("importFile").addEventListener("change", function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var name = file.name.toLowerCase();
+    if (name.indexOf(".yaml") === -1 && name.indexOf(".yml") === -1) { alert("请选择 .yaml 或 .yml 文件"); e.target.value = ""; return; }
+    var reader = new FileReader();
+    reader.onload = function () { importYAML(String(reader.result)); e.target.value = ""; };
+    reader.readAsText(file);
+  });
+  $("exportBtn").addEventListener("click", exportYAML);
+  $("addBtn").addEventListener("click", openAdd);
+  $("editCancel").addEventListener("click", function () { $("editMask").classList.remove("pb-show"); });
+  $("editSave").addEventListener("click", saveEdit);
+  $("prevBtn").addEventListener("click", function () { if (state.page > 1) { state.page--; render(); } });
+  $("nextBtn").addEventListener("click", function () { state.page++; render(); });
+  $("pageSize").addEventListener("change", function (e) { state.pageSize = parseInt(e.target.value, 10) || 20; state.page = 1; render(); });
+  $("helpBtn").addEventListener("click", function () { loadHelp(); $("helpMask").classList.add("pb-show"); });
+  $("helpClose").addEventListener("click", function () { $("helpMask").classList.remove("pb-show"); });
+  $("filterApply").addEventListener("click", applyFilter);
+  $("filterCancel").addEventListener("click", function () { $("filterModal").classList.remove("pb-show"); });
+
+  window.addEventListener("beforeunload", function (e) {
+    if (state.dirty) { var msg = "您有未保存的修改，刷新或离开将丢失所有本地编辑。确定要离开吗？"; e.returnValue = msg; return msg; }
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
