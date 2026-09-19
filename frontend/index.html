@@ -482,47 +482,78 @@
   function openFilterModal(key) {
     state.filterKey = key;
     var field = state.config.fields.filter(function (f) { return f.key === key; })[0];
+    if (!field) return;
+
     $("filterModalTitle").textContent = "筛选：" + field.label;
     var opts = $("filterOptions");
     opts.innerHTML = "";
+
     var selected = state.filters[key] || [];
-    var counts = valueCounts(key);
-    var values = Object.keys(counts).sort();
+    var baseRows = filterBaseRows(key);
+    var counts = valueCounts(baseRows, key);
+    var values = Object.keys(counts);
+
+    selected.forEach(function (v) {
+      if (!Object.prototype.hasOwnProperty.call(counts, v)) {
+        counts[v] = 0;
+        values.push(v);
+      }
+    });
+    values.sort(function (a, b) { return a.localeCompare(b, "zh-Hans-CN"); });
 
     values.forEach(function (v) {
       var lab = document.createElement("label");
       lab.className = "pb-filter-opt";
       lab.setAttribute("data-val", v);
+
       var inp = document.createElement("input");
-      inp.type = "checkbox"; inp.className = "opt";
+      inp.type = "checkbox";
+      inp.className = "opt";
       inp.value = v;
       inp.checked = selected.indexOf(v) !== -1;
+
       var span = document.createElement("span");
       var cnt = counts[v];
       span.textContent = (v === "" ? "(空)" : v) + (cnt > 1 ? " (" + cnt + ")" : "");
-      lab.appendChild(inp); lab.appendChild(span);
+
+      lab.appendChild(inp);
+      lab.appendChild(span);
       opts.appendChild(lab);
     });
 
-    // 关键字搜索：实时过滤可见项；隐藏项同时取消勾选，避免误提交
     var search = $("filterSearch");
     search.value = "";
     search.oninput = function () {
       var kws = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
       Array.prototype.forEach.call(opts.querySelectorAll(".pb-filter-opt"), function (lab) {
         var raw = lab.getAttribute("data-val") || "";
-        var hit = kws.length === 0 || kws.some(function (k) { return raw.toLowerCase().indexOf(k) !== -1; });
+        var hit = kws.length === 0 || kws.some(function (k) {
+          return raw.toLowerCase().indexOf(k) !== -1;
+        });
         lab.style.display = hit ? "" : "none";
-        if (!hit) { var cb = lab.querySelector("input.opt"); if (cb) cb.checked = false; }
       });
     };
 
-    // 工具栏：全选 / 反选 / 重复项 / 唯一项（仅作用于可见项）
     function visibleBoxes() {
       return Array.prototype.filter.call(opts.querySelectorAll(".pb-filter-opt"), function (lab) {
         return lab.style.display !== "none";
-      }).map(function (lab) { return lab.querySelector("input.opt"); });
+      }).map(function (lab) {
+        return lab.querySelector("input.opt");
+      });
     }
+
+    function sortFilterOptions(dir) {
+      var nodes = Array.prototype.slice.call(opts.querySelectorAll(".pb-filter-opt"));
+      nodes.sort(function (a, b) {
+        var av = a.getAttribute("data-val") || "";
+        var bv = b.getAttribute("data-val") || "";
+        return av.localeCompare(bv, "zh-Hans-CN") * dir;
+      });
+      nodes.forEach(function (node) { opts.appendChild(node); });
+    }
+
+    $("flAsc").onclick = function () { sortFilterOptions(1); };
+    $("flDesc").onclick = function () { sortFilterOptions(-1); };
     $("flAll").onclick = function () { visibleBoxes().forEach(function (cb) { cb.checked = true; }); };
     $("flInv").onclick = function () { visibleBoxes().forEach(function (cb) { cb.checked = !cb.checked; }); };
     $("flDup").onclick = function () { visibleBoxes().forEach(function (cb) { cb.checked = counts[cb.value] > 1; }); };
@@ -530,34 +561,10 @@
 
     $("filterModal").classList.add("pb-show");
   }
-  function applyFilter() {
-    var key = state.filterKey;
-    var checked = [];
-    Array.prototype.forEach.call($("filterOptions").querySelectorAll("input.opt"), function (inp) {
-      if (inp.checked) checked.push(inp.value);
-    });
-    if (checked.length === 0) {
-      delete state.filters[key];
-    } else {
-      state.filters[key] = checked;
-    }
-    state.page = 1;
-    dbg("列筛选：" + key + " = [" + checked.join(", ") + "]，结果 " + currentRows().length + " 条");
-    $("filterModal").classList.remove("pb-show");
-    render();
-  }
-  function valueCounts(key) {
-    var m = {};
-    state.contacts.forEach(function (c) {
-      var v = c[key] == null ? "" : String(c[key]);
-      m[v] = (m[v] || 0) + 1;
-    });
-    return m;
-  }
 
-  // ---------- 数据处理流水线 ----------
-  function currentRows() {
+  function filterBaseRows(excludeKey) {
     var rows = state.contacts;
+
     if (state.search) {
       var q = state.search.toLowerCase();
       rows = rows.filter(function (c) {
@@ -566,16 +573,72 @@
         });
       });
     }
+
     Object.keys(state.filters).forEach(function (k) {
+      if (k === excludeKey) return;
       var v = state.filters[k];
       if (v && v.length) {
-        rows = rows.filter(function (c) { return v.indexOf(String(c[k] == null ? "" : c[k])) !== -1; });
+        rows = rows.filter(function (c) {
+          return v.indexOf(String(c[k] == null ? "" : c[k])) !== -1;
+        });
       }
     });
-    if (state.sortKey && state.sortDir !== "none") {
-      var key = state.sortKey, dir = state.sortDir === "asc" ? 1 : -1;
+    return rows;
+  }
+
+  function hasEffectiveFilter(key) {
+    var selected = state.filters[key];
+    if (!selected || !selected.length) return false;
+    var counts = valueCounts(filterBaseRows(key), key);
+    return Object.keys(counts).some(function (v) {
+      return selected.indexOf(v) === -1;
+    });
+  }
+
+  function applyFilter() {
+    var key = state.filterKey;
+    var checked = [];
+    Array.prototype.forEach.call($("filterOptions").querySelectorAll("input.opt"), function (inp) {
+      if (inp.checked) checked.push(inp.value);
+    });
+
+    var baseCounts = valueCounts(filterBaseRows(key), key);
+    var available = Object.keys(baseCounts);
+    var selectsAllAvailable = available.length > 0 && available.every(function (v) {
+      return checked.indexOf(v) !== -1;
+    });
+
+    if (checked.length === 0 || selectsAllAvailable) {
+      delete state.filters[key];
+    } else {
+      state.filters[key] = checked;
+    }
+
+    state.page = 1;
+    dbg("列筛选：" + key + " = [" + checked.join(", ") + "]，结果 " + currentRows().length + " 条");
+    $("filterModal").classList.remove("pb-show");
+    render();
+  }
+
+  function valueCounts(rows, key) {
+    var m = {};
+    rows.forEach(function (c) {
+      var v = c[key] == null ? "" : String(c[key]);
+      m[v] = (m[v] || 0) + 1;
+    });
+    return m;
+  }
+
+
+  // ---------- 数据处理流水线 ----------
+  function currentRows() {
+    var rows = filterBaseRows(null);
+    if (state.sortKey && (state.sortDir === "asc" || state.sortDir === "desc")) {
+      var key = state.sortKey;
+      var dir = state.sortDir === "asc" ? 1 : -1;
       rows = rows.slice().sort(function (a, b) {
-        var av = String(a[key] == null ? "" : a[key]), bv = String(b[key] == null ? "" : b[key]);
+        var av = String(a[key] == null ? "" : a[key]);
+        var bv = String(b[key] == null ? "" : b[key]);
         return av.localeCompare(bv, "zh-Hans-CN") * dir;
       });
     }
@@ -583,13 +646,18 @@
   }
 
   function onSort(key) {
-    if (state.sortKey !== key) { state.sortKey = key; state.sortDir = "asc"; }
-    else if (state.sortDir === "asc") { state.sortDir = "desc"; }
-    else if (state.sortDir === "desc") { state.sortDir = "none"; state.sortKey = null; }
-    else { state.sortDir = "asc"; }
+    if (state.sortKey !== key) {
+      state.sortKey = key;
+      state.sortDir = "asc";
+    } else if (state.sortDir === "asc") {
+      state.sortDir = "desc";
+    } else {
+      state.sortDir = "asc";
+    }
     dbg("排序：字段 " + key + "，方向 " + state.sortDir);
     render();
   }
+
 
   // ---------- 表格渲染 ----------
   function render() {
