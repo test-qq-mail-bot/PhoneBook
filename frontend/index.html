@@ -143,11 +143,18 @@
     max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     font-size: 13.5px; color: var(--text);
   }
-  .pb-table-edit-btn {
-    padding: 5px 14px; border: 1px solid var(--primary); background: #fff; color: var(--primary);
+  .pb-table-op-actions {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .pb-table-edit-btn, .pb-table-delete-btn {
+    padding: 5px 12px; border: 1px solid var(--primary); background: #fff; color: var(--primary);
     border-radius: var(--radius-xs); cursor: pointer; font-size: 12.5px; font-weight: 500; transition: all 0.15s;
   }
   .pb-table-edit-btn:hover { background: var(--primary); color: #fff; }
+  .pb-table-delete-btn {
+    border-color: var(--danger); color: var(--danger);
+  }
+  .pb-table-delete-btn:hover { background: var(--danger); color: #fff; }
 
   .pb-pagination {
     display: flex; gap: 10px; align-items: center; padding: 14px 20px;
@@ -699,11 +706,24 @@
         });
         var tdOp = document.createElement("td");
         tdOp.className = "pb-table-cell";
-        var btn = document.createElement("button");
-        btn.className = "pb-table-edit-btn";
-        btn.textContent = "编辑";
-        btn.addEventListener("click", function () { openEdit(c); });
-        tdOp.appendChild(btn);
+        var actions = document.createElement("div");
+        actions.className = "pb-table-op-actions";
+
+        var editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "pb-table-edit-btn";
+        editBtn.textContent = "编辑";
+        editBtn.addEventListener("click", function () { openEdit(c); });
+        actions.appendChild(editBtn);
+
+        var deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "pb-table-delete-btn";
+        deleteBtn.textContent = "删除";
+        deleteBtn.addEventListener("click", function () { deleteContact(c); });
+        actions.appendChild(deleteBtn);
+
+        tdOp.appendChild(actions);
         tr.appendChild(tdOp);
         body.appendChild(tr);
       });
@@ -801,6 +821,23 @@
     buildEditForm(contact);
     $("editMask").classList.add("pb-show");
   }
+  function deleteContact(contact) {
+    var index = state.contacts.indexOf(contact);
+    if (index < 0) return;
+
+    var phoneId = contact.phone_id == null ? "" : String(contact.phone_id);
+    var name = contact.name == null ? "" : String(contact.name);
+    var desc = [phoneId, name].filter(function (v) { return v !== ""; }).join(" / ");
+    var message = desc ? "确定要删除联系人「" + desc + "」吗？" : "确定要删除这个联系人吗？";
+    if (!window.confirm(message + "\n此删除仅作用于当前页面内存，刷新后会恢复服务器数据。")) return;
+
+    state.contacts.splice(index, 1);
+    setDirty(true);
+    if (state.editIndex === index) state.editIndex = -1;
+    dbg("删除联系人：" + (phoneId || name || "(无编号)"));
+    render();
+  }
+
   function openAdd() {
     state.editIndex = -1;
     $("editTitle").textContent = "新增联系人";
