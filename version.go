@@ -6,7 +6,7 @@ package main
 //       go-winres make --arch amd64 --out rsrc
 // 重新生成 rsrc_windows_amd64.syso，否则 Windows exe 的
 // 「详细信息」仍会显示旧版本号。
-const Version = "20260919-V5"
+const Version = "20260919-V6"
 
 // AppName 应用名称
 const AppName = "PhoneBook"
