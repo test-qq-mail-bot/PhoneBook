@@ -118,12 +118,23 @@
   .pb-table-head-cell:hover { background: #eff1f6; }
   .pb-col-head-wrap { display: flex; align-items: center; gap: 8px; }
   .pb-col-filter-btn {
+    width: 30px; height: 28px; padding: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
     border: 1px solid var(--border); background: #fff; color: var(--text-muted);
-    border-radius: var(--radius-xs); cursor: pointer; font-size: 11px; font-weight: 500;
-    padding: 2px 8px; transition: all 0.15s;
+    border-radius: var(--radius-xs); cursor: pointer;
+    transition: all 0.15s;
   }
-  .pb-col-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
-  .pb-col-filter-btn.pb-active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .pb-col-filter-icon {
+    width: 16px; height: 16px; display: block; flex: 0 0 auto;
+    fill: currentColor;
+  }
+  .pb-col-filter-btn:hover {
+    border-color: var(--primary); color: var(--primary); background: var(--primary-light);
+  }
+  .pb-col-filter-btn.pb-active {
+    background: var(--primary); color: #fff; border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-light);
+  }
   .pb-table-sort-icon { color: var(--primary); margin-left: 2px; font-size: 11px; font-weight: 700; cursor: pointer; }
   .pb-table-row { transition: background 0.1s; }
   .pb-table-row:hover { background: var(--primary-light) !important; }
@@ -462,7 +473,9 @@
       var filterBtn = document.createElement("button");
       filterBtn.type = "button";
       filterBtn.className = "pb-col-filter-btn" + (hasEffectiveFilter(f.key) ? " pb-active" : "");
-      filterBtn.textContent = "筛选";
+      filterBtn.setAttribute("aria-label", "筛选" + f.label);
+      filterBtn.setAttribute("title", "筛选" + f.label);
+      filterBtn.innerHTML = '<svg class="pb-col-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.5 7.5v5.8l-3 1.7v-7.5L4 5z"></path></svg>';
       filterBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         openFilterModal(f.key);
@@ -590,11 +603,7 @@
 
   function hasEffectiveFilter(key) {
     var selected = state.filters[key];
-    if (!selected || !selected.length) return false;
-    var counts = valueCounts(filterBaseRows(key), key);
-    return Object.keys(counts).some(function (v) {
-      return selected.indexOf(v) === -1;
-    });
+    return Array.isArray(selected) && selected.length > 0;
   }
 
   function applyFilter() {
