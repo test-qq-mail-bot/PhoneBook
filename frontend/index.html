@@ -387,7 +387,7 @@
         throw new Error("服务器返回的配置无效：缺少 config.fields");
       }
       state.config = data.config;
-      var defaultSortField = data.config.fields.find(function (f) { return f.key === "name"; }) || data.config.fields[0];
+      var defaultSortField = data.config.fields.find(function (f) { return f.key === "phone_id"; }) || data.config.fields[0];
       state.sortKey = defaultSortField ? defaultSortField.key : null;
       state.sortDir = defaultSortField ? "asc" : "none";
       state.status = data.status;
@@ -1011,7 +1011,7 @@
       "<h3>1. 软件简介</h3><p>PhoneBook 是轻量级内部电话通讯录，服务器只提供只读数据，所有编辑在浏览器内存中完成，刷新即恢复。</p>",
       "<h3>2. 查看通讯录</h3><p>页面加载后表格展示全部联系人，下方分页可翻页。</p>",
       "<h3>3. 搜索</h3><p>在搜索框输入关键字，实时跨所有字段过滤，不区分大小写。</p>",
-      "<h3>4. 排序</h3><p>默认按“姓名”升序排列；点击任意表头区域可在升序 / 降序之间循环切换。</p>",
+      "<h3>4. 排序</h3><p>默认按“电话编号”升序排列；点击任意表头区域可在升序 / 降序之间循环切换。</p>",
       "<h3>5. 列筛选</h3><p>点击表头列的「筛选」按钮打开弹框：顶部输入关键字可实时过滤选项；工具栏「全选 / 反选 / 重复项 / 唯一项」可快速勾选（重复项=本列出现多次的值，唯一项=仅出现一次的值）；勾选要保留的值后点「确定」即按该列过滤，「取消」关闭。清空筛选可先「全选」再「确定」。</p>",
       "<h3>6. 分页</h3><p>每页条数可选 10/25/50/100，切换后跳回第 1 页；第一页固定在最左侧，最后一页固定在最右侧，便于快速跳转。</p>",
       "<h3>7. 编辑</h3><p>点「编辑」修改联系人，仅本地生效；点「新增联系人」添加一条。</p>",
