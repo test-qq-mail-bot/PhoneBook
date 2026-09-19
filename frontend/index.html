@@ -751,7 +751,7 @@
   </div>
 
   <div class="pb-missing-panel" id="missingPanel" style="display:none;">
-    提示：<b>contacts.yaml 文件不存在</b>。您可以先点「新增联系人」录入数据，再点「导出 YAML」生成该文件；或直接导入一份合法的 contacts.yaml。当前表格为空。
+    <span id="missingPrefix">提示：</span><b id="missingTitle">contacts.yaml 文件不存在</b>。您可以先点「新增联系人」录入数据，再点「导出 YAML」生成该文件；或直接导入一份合法的 contacts.yaml。当前表格为空。
   </div>
 
   <div class="pb-card" id="contactCard">
@@ -784,10 +784,10 @@
       <label class="pb-pagination-size-label" id="pageSizeLabel">
         每页
             <select class="pb-pagination-size-select" id="pageSize">
-          <option value="10">10</option>
-          <option value="25" selected>25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
+          <option id="page-size-10" value="10">10</option>
+          <option id="page-size-25" value="25" selected>25</option>
+          <option id="page-size-50" value="50">50</option>
+          <option id="page-size-100" value="100">100</option>
         </select> 条/页
       </label>
       <div class="pb-page-nav" id="pageNav"></div>
@@ -795,7 +795,7 @@
   </div>
 
   <div class="pb-footer" id="pbFooter"><svg class="pb-footer-icon" id="footerInfoIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
-    本地修改不会保存，刷新页面将恢复服务器数据。如需永久修改，请导出 YAML 文件并联系管理员。
+    <span id="footerMessage">本地修改不会保存，刷新页面将恢复服务器数据。如需永久修改，请导出 YAML 文件并联系管理员。</span>
   </div>
 </div>
 
@@ -838,7 +838,7 @@
 <!-- 帮助弹窗 -->
 <div class="pb-modal-mask" id="helpMask">
   <div class="pb-modal-help" id="helpDialog">
-    <div class="pb-modal-title">PhoneBook 使用帮助</div>
+    <div class="pb-modal-title" id="helpTitle">PhoneBook 使用帮助</div>
     <div class="pb-modal-help-content" id="helpContent"></div>
     <div class="pb-modal-actions" id="helpActions">
       <button class="pb-btn" id="helpClose">关闭</button>
@@ -951,9 +951,9 @@
   function renderHead() {
     var head = $("tableHead");
     head.innerHTML = "";
-    state.config.fields.forEach(function (f) {
+    state.config.fields.forEach(function (f, idx) {
       var th = document.createElement("th");
-      var idKey = safeIdPart(f.key);
+      var idKey = idx + "-" + safeIdPart(f.key);
       th.id = "table-head-" + idKey;
       th.className = "pb-table-head-cell";
       th.setAttribute("data-key", f.key);
@@ -986,7 +986,7 @@
       filterBtn.className = "pb-col-filter-btn" + (hasEffectiveFilter(f.key) ? " pb-active" : "");
       filterBtn.setAttribute("aria-label", "筛选" + f.label);
       filterBtn.setAttribute("title", "筛选" + f.label);
-      filterBtn.innerHTML = '<svg class="pb-col-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.5 7.5v5.8l-3 1.7v-7.5L4 5z"></path></svg>';
+      filterBtn.innerHTML = '<svg id="table-filter-icon-' + idKey + '" class="pb-col-filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.5 7.5v5.8l-3 1.7v-7.5L4 5z"></path></svg>';
       filterBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         openFilterModal(f.key);
@@ -1000,6 +1000,7 @@
     });
 
     var thOp = document.createElement("th");
+    thOp.id = "table-head-actions";
     thOp.className = "pb-table-head-cell";
     thOp.textContent = "操作";
     head.appendChild(thOp);
@@ -1609,19 +1610,19 @@
   // ---------- 帮助文档（含证书说明） ----------
   function loadHelp() {
     var c = [
-      "<h3 id="help-section-1">1. 软件简介</h3><p id="help-section-1-text">PhoneBook 是轻量级内部电话通讯录，服务器只提供只读数据，所有编辑在浏览器内存中完成，刷新即恢复。</p>",
-      "<h3 id="help-section-2">2. 查看通讯录</h3><p id="help-section-2-text">页面加载后表格展示全部联系人，下方分页可翻页。</p>",
-      "<h3 id="help-section-3">3. 搜索</h3><p id="help-section-3-text">在搜索框输入关键字，实时跨所有字段过滤，不区分大小写。</p>",
-      "<h3 id="help-section-4">4. 排序</h3><p id="help-section-4-text">默认按“电话编号”升序排列；点击任意表头区域可在升序 / 降序之间循环切换。</p>",
-      "<h3 id="help-section-5">5. 列筛选</h3><p id="help-section-5-text">点击表头列的「筛选」按钮打开弹框：顶部输入关键字可实时过滤选项；工具栏「全选 / 反选 / 重复项 / 唯一项」可快速勾选（重复项=本列出现多次的值，唯一项=仅出现一次的值）；勾选要保留的值后点「确定」即按该列过滤，「取消」关闭。清空筛选可先「全选」再「确定」。</p>",
-      "<h3 id="help-section-6">6. 分页</h3><p id="help-section-6-text">每页条数可选 10/25/50/100，切换后跳回第 1 页；第一页固定在最左侧，最后一页固定在最右侧，便于快速跳转。</p>",
-      "<h3 id="help-section-7">7. 编辑</h3><p id="help-section-7-text">点「编辑」修改联系人，仅本地生效；点「新增联系人」添加一条。</p>",
-      "<h3 id="help-section-8">8. 导入 / 导出 YAML</h3><p id="help-section-8-text">导出当前数据为标准 contacts.yaml（缺失字段自动以空白值补全）；导入合法文件替换内存数据。导入会校验格式与长度。</p>",
-      "<h3 id="help-section-9">9. 重要提醒</h3><p id="help-section-9-text">本地修改不会保存，刷新即恢复服务器数据；永久修改需导出后联系管理员替换服务器文件。</p>",
-      "<h3 id="help-section-10">10. YAML 格式说明</h3><p id="help-section-10-text">每行一个联系人，字段名与 config.yaml 的 fields.key 一致，值建议双引号包裹，长度不超过 maxlen。</p>",
-      "<h3 id="help-section-11">11. 证书警告（正常现象）</h3><p id="help-section-11-text">浏览器访问时若提示「证书不安全 / 您的连接不是私密连接」，这是<b>自签证书的正常现象</b>，并非程序故障。处理方式：点击「高级」→「继续前往（不安全）」即可正常使用。</p>",
-      "<p>彻底消除提示的两种方法：① 将 <code>certs/server.crt</code> 导入系统/浏览器信任库；② 在 <code>config.yaml</code> 将 <code>https_enabled</code> 改为 <code>false</code> 走 HTTP 明文（仅限内网可信环境）。</p>",
-      "<h3 id="help-section-12">12. contacts.yaml 不存在</h3><p id="help-section-12-text">若文件不存在，页面会提示。您可先「新增联系人」录入，再「导出 YAML」生成该文件，或直接「导入」一份合法文件，即可修复。</p>"
+      '<h3 id="help-section-1">1. 软件简介</h3><p id="help-section-1-text">PhoneBook 是轻量级内部电话通讯录，服务器只提供只读数据，所有编辑在浏览器内存中完成，刷新即恢复。</p>',
+      '<h3 id="help-section-2">2. 查看通讯录</h3><p id="help-section-2-text">页面加载后表格展示全部联系人，下方分页可翻页。</p>',
+      '<h3 id="help-section-3">3. 搜索</h3><p id="help-section-3-text">在搜索框输入关键字，实时跨所有字段过滤，不区分大小写。</p>',
+      '<h3 id="help-section-4">4. 排序</h3><p id="help-section-4-text">默认按“电话编号”升序排列；点击任意表头区域可在升序 / 降序之间循环切换。</p>',
+      '<h3 id="help-section-5">5. 列筛选</h3><p id="help-section-5-text">点击表头列的「筛选」按钮打开弹框：顶部输入关键字可实时过滤选项；工具栏「全选 / 反选 / 重复项 / 唯一项」可快速勾选（重复项=本列出现多次的值，唯一项=仅出现一次的值）；勾选要保留的值后点「确定」即按该列过滤，「取消」关闭。清空筛选可先「全选」再「确定」。</p>',
+      '<h3 id="help-section-6">6. 分页</h3><p id="help-section-6-text">每页条数可选 10/25/50/100，切换后跳回第 1 页；第一页固定在最左侧，最后一页固定在最右侧，便于快速跳转。</p>',
+      '<h3 id="help-section-7">7. 编辑</h3><p id="help-section-7-text">点「编辑」修改联系人，仅本地生效；点「新增联系人」添加一条；编辑窗口也可以删除联系人。电话号码作为唯一键，同号码新增会覆盖原联系人，编辑时不能与其他联系人使用相同号码。</p>',
+      '<h3 id="help-section-8">8. 导入 / 导出 YAML</h3><p id="help-section-8-text">导出当前数据为标准 contacts.yaml（缺失字段自动以空白值补全）；导入合法文件替换内存数据。导入会校验格式与长度。</p>',
+      '<h3 id="help-section-9">9. 重要提醒</h3><p id="help-section-9-text">本地修改不会保存，刷新即恢复服务器数据；永久修改需导出后联系管理员替换服务器文件。网页删除联系人同样不会修改服务器文件。</p>',
+      '<h3 id="help-section-10">10. YAML 格式说明</h3><p id="help-section-10-text">每行一个联系人，字段名与 config.yaml 的 fields.key 一致，值建议双引号包裹，长度不超过 maxlen。</p>',
+      '<h3 id="help-section-11">11. 证书警告（正常现象）</h3><p id="help-section-11-text">浏览器访问时若提示「证书不安全 / 您的连接不是私密连接」，这是<b id="help-cert-note">自签证书的正常现象</b>，并非程序故障。处理方式：点击「高级」→「继续前往（不安全）」即可正常使用。</p>',
+      '<p id="help-section-11-extra">彻底消除提示的两种方法：① 将 <code id="help-cert-path">certs/server.crt</code> 导入系统/浏览器信任库；② 在 <code id="help-http-config">config.yaml</code> 将 <code id="help-http-key">https_enabled</code> 改为 <code id="help-http-value">false</code> 走 HTTP 明文（仅限内网可信环境）。</p>',
+      '<h3 id="help-section-12">12. contacts.yaml 不存在</h3><p id="help-section-12-text">若文件不存在，页面会提示。您可先「新增联系人」录入，再「导出 YAML」生成该文件，或直接「导入」一份合法文件，即可修复。</p>'
     ].join("");
     $("helpContent").innerHTML = c;
   }
