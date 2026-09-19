@@ -2,7 +2,7 @@
   "RT_MANIFEST": {
     "#1": {
       "0409": {
-        "identity": { "name": "PhoneBook", "version": "2026.8.13.3" },
+        "identity": { "name": "PhoneBook", "version": "2026.9.19.1" },
         "description": "PhoneBook 轻量级内部电话通讯录",
         "minimum-os": "win7",
         "execution-level": "as invoker",
@@ -25,22 +25,22 @@
     "#1": {
       "0000": {
         "fixed": {
-        "file_version": "2026.8.13.3",
-        "product_version": "2026.8.13.3"
+        "file_version": "2026.9.19.1",
+        "product_version": "2026.9.19.1"
         },
         "info": {
           "0409": {
             "Comments": "PhoneBook 轻量级内部电话通讯录",
             "CompanyName": "PhoneBook",
             "FileDescription": "PhoneBook 轻量级内部电话通讯录",
-            "FileVersion": "20260813-V3",
+            "FileVersion": "20260919-V1",
             "InternalName": "PhoneBook",
             "LegalCopyright": "Copyright (c) 2026",
             "LegalTrademarks": "",
             "OriginalFilename": "PhoneBook.exe",
             "PrivateBuild": "",
             "ProductName": "PhoneBook",
-            "ProductVersion": "20260813-V3",
+            "ProductVersion": "20260919-V1",
             "SpecialBuild": ""
           }
         }
