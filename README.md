@@ -48,7 +48,6 @@
 ├── frontend_embed.go  由 gen_frontend.py 生成的「前端 HTML 的 base64 内嵌」
 ├── gen_frontend.py    将 frontend/index.html 重新生成 frontend_embed.go
 ├── go.mod / go.sum   Go module 定义
-├── rsrc_windows_amd64.syso  Windows 版本资源（go-winres 生成）
 ├── frontend/
 │   └── index.html     前端页面（唯一前端源文件）
 └── winres/
@@ -78,29 +77,26 @@ cd 源代码
 go build -o PhoneBook .
 ```
 
-### 2. 交叉编译
+### 2. Windows amd64 构建
 
-Linux 与 Windows 可执行文件：
-
-```bash
-# Linux amd64
-GOOS=linux GOARCH=amd64 go build -o PhoneBook .
-
-# Windows amd64（不带版本资源也可运行）
-GOOS=windows GOARCH=amd64 go build -o PhoneBook.exe .
-```
-
-### 3. Windows 可执行文件写入「详细信息」版本号
-
-Windows exe 的「详细信息」版本来自 `winres/winres.json`，由 `go-winres` 编译进 `rsrc_windows_amd64.syso`：
+Windows EXE 在构建前需要根据 `winres/winres.json` 生成 Windows 版本资源。`rsrc_windows_amd64.syso` 是构建过程生成的中间文件，**不需要提交到 GitHub**，并已加入 `.gitignore`。
 
 ```bash
 cd 源代码
-go-winres make --arch amd64 --out rsrc          # 重新生成 rsrc_windows_amd64.syso
+# 生成 Windows 版本资源文件（rsrc_windows_amd64.syso）
+go-winres make --arch amd64 --out rsrc
+# 编译 Windows amd64
 GOOS=windows GOARCH=amd64 go build -o PhoneBook.exe .
 ```
 
-> 注意：`.syso` 是固定文件名、仅在 Windows 链接时生效，Linux 构建会忽略它。修改 `winres/winres.json` 后**必须重跑 `go-winres make`** 才能反映到 exe 详情，否则显示的仍是旧版本号。
+### 3. Linux amd64 构建
+
+```bash
+cd 源代码
+GOOS=linux GOARCH=amd64 go build -o PhoneBook .
+```
+
+> 注意：每次修改 `winres/winres.json` 后，重新构建 Windows EXE 前都应执行 `go-winres make --arch amd64 --out rsrc`，以生成最新的 `rsrc_windows_amd64.syso`。该文件仅用于 Windows 构建，不应提交到 GitHub。
 
 ---
 
@@ -128,7 +124,7 @@ go build -o PhoneBook .       # 再编译
 
 1. `version.go` 中的 `Version` 常量。
 2. `winres/winres.json` 的 `identity.version`、`file_version`、`product_version` 与 `info.FileVersion`/`info.ProductVersion`。
-3. 重跑 `go-winres make --arch amd64 --out rsrc` 重新生成 `rsrc_windows_amd64.syso`。
+3. 在 Windows 构建前执行 `go-winres make --arch amd64 --out rsrc`，临时生成 `rsrc_windows_amd64.syso`；该文件不提交到 GitHub。
 
 校验方式：
 
