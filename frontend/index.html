@@ -366,11 +366,20 @@
 
   // ---------- 初始化 ----------
   function init() {
-    fetch("/api/data").then(function (r) { return r.json(); }).then(function (data) {
+    fetch("/api/data").then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (data) {
+      if (!data.config || !Array.isArray(data.config.fields)) {
+        throw new Error("服务器返回的配置无效：缺少 config.fields");
+      }
       state.config = data.config;
+      var defaultSortField = data.config.fields.find(function (f) { return f.key === "name"; }) || data.config.fields[0];
+      state.sortKey = defaultSortField ? defaultSortField.key : null;
+      state.sortDir = defaultSortField ? "asc" : "none";
       state.status = data.status;
-      state.contacts = data.contacts || [];
-      state.errors = data.errors || [];
+      state.contacts = Array.isArray(data.contacts) ? data.contacts : [];
+      state.errors = Array.isArray(data.errors) ? data.errors : [];
       dbg("数据加载完成，共 " + state.contacts.length + " 条联系人");
       dbg("字段定义：" + JSON.stringify(state.config.fields));
       if (state.status === "error") {
@@ -378,23 +387,20 @@
         setToolbarDisabled(true);
         renderEmpty();
       } else if (state.status === "missing") {
-        // 文件不存在：提示但保留新增/导出/导入可用
         $("missingPanel").style.display = "block";
         render();
       } else {
         render();
       }
     }).catch(function (e) {
-      // 证书不被信任等导致 fetch 失败：在控制台说明正常并给出修复步骤
       console.error("[PB-ERROR] 加载 /api/data 失败:", e);
-      var msg = "无法连接服务器。若浏览器提示「证书不安全」，这是自签证书的正常现象，" +
-        "并非程序故障：请在地址栏点击「高级」->「继续前往（不安全）」后再刷新本页面。" +
+      var msg = "无法连接服务器。若浏览器提示「证书不安全」，这是自签证书的正常现象，并非程序故障：" +
+        "请在地址栏点击「高级」->「继续前往（不安全）」后再刷新本页面。" +
         "如需彻底消除提示，可将 certs/server.crt 导入系统/浏览器信任库，或在 config.yaml 中将 https_enabled 改为 false 走 HTTP。";
       console.warn("[PB-NOTICE] " + msg);
       showConnError(msg);
     });
   }
-
   function showConnError(msg) {
     var div = document.createElement("div");
     div.className = "pb-connerr-panel";
@@ -431,36 +437,47 @@
       var th = document.createElement("th");
       th.className = "pb-table-head-cell";
       th.setAttribute("data-key", f.key);
+      th.addEventListener("click", function (e) {
+        if (e.target.closest && e.target.closest(".pb-col-filter-btn")) return;
+        onSort(f.key);
+      });
+
       var wrap = document.createElement("div");
       wrap.className = "pb-col-head-wrap";
+
       var label = document.createElement("span");
       label.textContent = f.label;
       label.style.cursor = "pointer";
-      label.addEventListener("click", function () { onSort(f.key); });
+
       var sortIcon = "";
-      if (state.sortKey === f.key) {
-        sortIcon = state.sortDir === "asc" ? " ↑" : (state.sortDir === "desc" ? " ↓" : "");
+      if (state.sortKey === f.key && (state.sortDir === "asc" || state.sortDir === "desc")) {
+        sortIcon = state.sortDir === "asc" ? " ↑" : " ↓";
       }
       var sortSpan = document.createElement("span");
       sortSpan.className = "pb-table-sort-icon";
       sortSpan.textContent = sortIcon;
-      sortSpan.addEventListener("click", function (e) { e.stopPropagation(); onSort(f.key); });
+
       var filterBtn = document.createElement("button");
-      filterBtn.className = "pb-col-filter-btn" + (state.filters[f.key] && state.filters[f.key].length ? " pb-active" : "");
+      filterBtn.type = "button";
+      filterBtn.className = "pb-col-filter-btn" + (hasEffectiveFilter(f.key) ? " pb-active" : "");
       filterBtn.textContent = "筛选";
-      filterBtn.addEventListener("click", function (e) { e.stopPropagation(); openFilterModal(f.key); });
+      filterBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openFilterModal(f.key);
+      });
+
       wrap.appendChild(label);
       wrap.appendChild(sortSpan);
       wrap.appendChild(filterBtn);
       th.appendChild(wrap);
       head.appendChild(th);
     });
+
     var thOp = document.createElement("th");
     thOp.className = "pb-table-head-cell";
     thOp.textContent = "操作";
     head.appendChild(thOp);
   }
-
   // ---------- 列筛选弹框 ----------
   function openFilterModal(key) {
     state.filterKey = key;
