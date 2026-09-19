@@ -111,6 +111,8 @@ GOOS=linux GOARCH=amd64 go build -o PhoneBook .
 
 例如当前版本 `20260919-V1` 会对应 Release 标签 `v20260919-V1`。同一版本后续普通提交不会重复创建 Release；需要重新发布同一版本时，可在 Actions 页面手动执行 `Run workflow` 并填写对应的 `release_tag`。
 
+本项目的 GitHub Actions 使用 Ubuntu 24.04，并采用 Node.js 24 兼容的官方 Actions；Windows 发布资源按构建步骤动态生成，不提交 `rsrc_windows_amd64.syso`。
+
 ## 重要：修改前端后必须重生成内嵌
 
 本项目**不使用 Go 官方的 `//go:embed`**（构建环境对该指令不可用），前端以 **base64 字符串**形式内嵌在 `frontend_embed.go` 的 `indexHTML` 变量中。因此：
