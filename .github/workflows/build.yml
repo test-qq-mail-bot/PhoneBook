@@ -1,8 +1,9 @@
 name: Build and Release PhoneBook
 
 # 触发：
-#   1) 推送代码到 main/master 分支 -> 自动构建最新可执行文件（产物作为 artifact 可下载）
-#   2) 手动在 Actions 页面点 "Run workflow" -> 构建并发布到 GitHub Release（由你点击决定何时发版）
+#   1) 推送代码到 main/master 分支 -> 自动构建最新可执行文件
+#   2) 当前版本 Release 不存在时，自动发布到 GitHub Release
+#   3) 手动在 Actions 页面点 "Run workflow" -> 按输入标签发布/更新 Release
 on:
   push:
     branches:
@@ -21,7 +22,7 @@ permissions:
 jobs:
   build:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -34,10 +35,10 @@ jobs:
             out: PhoneBook.exe
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: '1.23'
 
@@ -73,25 +74,77 @@ jobs:
         run: go build -o "${{ matrix.out }}" .
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.out }}
           path: ${{ matrix.out }}
           if-no-files-found: error
 
-  # 仅当你在 Actions 页面手动点 "Run workflow" 时才发布 Release；
-  # 普通 push 代码只构建、不会自动发版。
+  # 自动发布策略：
+  # - push：当前 version.go 对应的 Release 不存在时自动发布；
+  # - workflow_dispatch：始终按 release_tag（或 version.go）发布/更新。
   release:
-    name: Publish to GitHub Release (manual)
+    name: Publish to GitHub Release
     needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout (读取 version.go)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          TAG="${{ github.event.inputs.release_tag }}"
+          if [ -z "$TAG" ]; then
+            VER=$(grep -oE 'Version = "[^"]+"' version.go | head -1 | sed -E 's/Version = "([^"]+)"/\1/')
+            TAG="v${VER}"
+            echo "从 version.go 取到版本号：$VER"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether release already exists
+        id: release_check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if gh release view "${{ steps.tag.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release ${{ steps.tag.outputs.tag }} 已存在，跳过自动重新发布。"
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release ${{ steps.tag.outputs.tag }} 不存在，将自动发布。"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or update Release
+        if: steps.release_check.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: |
+            artifacts/PhoneBook
+            artifacts/PhoneBook.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout (读取 version.go)
+        uses: actions/checkout@v7
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
           merge-multiple: true
@@ -109,7 +162,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           files: |
