@@ -100,6 +100,17 @@ GOOS=linux GOARCH=amd64 go build -o PhoneBook .
 
 ---
 
+## GitHub Actions 自动构建与发布
+
+推送代码到 `main`/ `master` 后，GitHub Actions 会自动构建 Linux amd64 与 Windows amd64 可执行文件，并上传到当前 Workflow 的 Artifacts。
+
+当 `version.go` 中对应版本号的 GitHub Release 尚不存在时，Workflow 会自动创建 Release，并附带：
+
+- `PhoneBook`（Linux amd64）
+- `PhoneBook.exe`（Windows amd64）
+
+例如当前版本 `20260919-V1` 会对应 Release 标签 `v20260919-V1`。同一版本后续普通提交不会重复创建 Release；需要重新发布同一版本时，可在 Actions 页面手动执行 `Run workflow` 并填写对应的 `release_tag`。
+
 ## 重要：修改前端后必须重生成内嵌
 
 本项目**不使用 Go 官方的 `//go:embed`**（构建环境对该指令不可用），前端以 **base64 字符串**形式内嵌在 `frontend_embed.go` 的 `indexHTML` 变量中。因此：
