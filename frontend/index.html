@@ -868,17 +868,54 @@
       form.appendChild(wrap);
     });
   }
+  function contactPhoneKey(contact) {
+    return String(contact && contact.phone_id != null ? contact.phone_id : "").trim();
+  }
+
   function saveEdit() {
     var inputs = $("editForm").querySelectorAll("input");
     var obj = {};
     inputs.forEach(function (inp) { obj[inp.getAttribute("data-key")] = inp.value; });
-    if (state.editIndex >= 0) {
-      state.contacts[state.editIndex] = obj;
-      dbg("编辑联系人：" + (obj.phone_id || ""));
-    } else {
-      state.contacts.push(obj);
-      dbg("新增联系人：" + (obj.phone_id || ""));
+
+    var phoneKey = contactPhoneKey(obj);
+    if (!phoneKey) {
+      alert("电话号码不能为空，电话号码用于唯一识别联系人。");
+      return;
     }
+
+    if (state.editIndex >= 0) {
+      var duplicateIndex = -1;
+      for (var i = 0; i < state.contacts.length; i++) {
+        if (i !== state.editIndex && contactPhoneKey(state.contacts[i]) === phoneKey) {
+          duplicateIndex = i;
+          break;
+        }
+      }
+      if (duplicateIndex >= 0) {
+        alert("电话号码「" + phoneKey + "」已被其他联系人使用，请更换电话号码。");
+        return;
+      }
+
+      state.contacts[state.editIndex] = obj;
+      dbg("编辑联系人：" + phoneKey);
+    } else {
+      var existingIndex = -1;
+      for (var j = 0; j < state.contacts.length; j++) {
+        if (contactPhoneKey(state.contacts[j]) === phoneKey) {
+          existingIndex = j;
+          break;
+        }
+      }
+
+      if (existingIndex >= 0) {
+        state.contacts[existingIndex] = obj;
+        dbg("新增时覆盖同电话号码联系人：" + phoneKey);
+      } else {
+        state.contacts.push(obj);
+        dbg("新增联系人：" + phoneKey);
+      }
+    }
+
     setDirty(true);
     $("editMask").classList.remove("pb-show");
     render();
