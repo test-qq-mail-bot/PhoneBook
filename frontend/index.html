@@ -154,6 +154,15 @@
     padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs);
     font-size: 13px; color: var(--text); background: #fff; cursor: pointer;
   }
+  .pb-page-nav { display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-left:auto; }
+  .pb-page-btn {
+    min-width:34px; padding:7px 10px; border:1px solid var(--border); background:#fff;
+    color:var(--text); border-radius:var(--radius-xs); cursor:pointer; font-size:13px; font-weight:500;
+  }
+  .pb-page-btn:hover { border-color:var(--primary); color:var(--primary); }
+  .pb-page-btn.active { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .pb-page-btn:disabled { cursor:default; }
+  .pb-page-ellipsis { min-width:20px; text-align:center; color:var(--text-muted); }
 
   .pb-footer {
     padding: 12px 20px; background: var(--warning-bg); border-top: 1px solid #f0e2bf;
@@ -260,16 +269,17 @@
     </div>
 
     <div class="pb-pagination">
-      <button class="pb-pagination-btn" id="prevBtn">上一页</button>
-      <span class="pb-pagination-page" id="pageInfo"></span>
-      <button class="pb-pagination-btn" id="nextBtn">下一页</button>
       <span class="pb-pagination-info" id="totalInfo"></span>
-      <label style="margin-left:auto; font-size:13px; color:var(--text-secondary);">
+      <label style="font-size:13px; color:var(--text-secondary);">
         每页
         <select class="pb-pagination-size-select" id="pageSize">
-          <option>10</option><option selected>20</option><option>30</option><option>50</option><option>100</option>
-        </select> 条
+          <option value="10">10</option>
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select> 条/页
       </label>
+      <div class="pb-page-nav" id="pageNav"></div>
     </div>
   </div>
 
@@ -336,7 +346,7 @@
     filters: {},
     filterKey: null,
     page: 1,
-    pageSize: 20,
+    pageSize: 25,
     dirty: false,
     editIndex: -1
   };
@@ -607,10 +617,79 @@
 
   function updatePagination(total) {
     var pages = Math.max(1, Math.ceil(total / state.pageSize));
-    $("pageInfo").textContent = "第 " + state.page + " 页 / 共 " + pages + " 页";
+    if (state.page > pages) state.page = pages;
+    if (state.page < 1) state.page = 1;
+
     $("totalInfo").textContent = "共 " + total + " 条记录";
-    $("prevBtn").disabled = state.page <= 1;
-    $("nextBtn").disabled = state.page >= pages;
+
+    var nav = $("pageNav");
+    nav.innerHTML = "";
+
+    // 第一页固定在最左侧。
+    appendPageButton(nav, 1);
+
+    var prev = document.createElement("button");
+    prev.type = "button";
+    prev.className = "pb-pagination-btn";
+    prev.textContent = "上一页";
+    prev.disabled = state.page <= 1;
+    prev.addEventListener("click", function () {
+      if (state.page > 1) { state.page--; render(); }
+    });
+    nav.appendChild(prev);
+
+    if (pages > 5) {
+      var start = Math.max(2, state.page - 2);
+      var end = Math.min(pages - 1, state.page + 2);
+
+      if (state.page <= 3) {
+        start = 2;
+        end = 5;
+      }
+      if (state.page >= pages - 2) {
+        start = pages - 4;
+        end = pages - 1;
+      }
+
+      if (start > 2) appendEllipsis(nav);
+      for (var p = start; p <= end; p++) appendPageButton(nav, p);
+      if (end < pages - 1) appendEllipsis(nav);
+    } else {
+      for (var i = 2; i <= pages; i++) appendPageButton(nav, i);
+    }
+
+    var next = document.createElement("button");
+    next.type = "button";
+    next.className = "pb-pagination-btn";
+    next.textContent = "下一页";
+    next.disabled = state.page >= pages;
+    next.addEventListener("click", function () {
+      if (state.page < pages) { state.page++; render(); }
+    });
+    nav.appendChild(next);
+
+    // 最后一页固定在最右侧。
+    if (pages > 1) appendPageButton(nav, pages);
+  }
+
+  function appendPageButton(nav, page) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pb-page-btn" + (page === state.page ? " active" : "");
+    btn.textContent = String(page);
+    if (page === state.page) btn.disabled = true;
+    btn.addEventListener("click", function () {
+      state.page = page;
+      render();
+    });
+    nav.appendChild(btn);
+  }
+
+  function appendEllipsis(nav) {
+    var span = document.createElement("span");
+    span.className = "pb-page-ellipsis";
+    span.textContent = "…";
+    nav.appendChild(span);
   }
 
   // ---------- 编辑 / 新增 ----------
@@ -802,7 +881,11 @@
   $("editSave").addEventListener("click", saveEdit);
   $("prevBtn").addEventListener("click", function () { if (state.page > 1) { state.page--; render(); } });
   $("nextBtn").addEventListener("click", function () { state.page++; render(); });
-  $("pageSize").addEventListener("change", function (e) { state.pageSize = parseInt(e.target.value, 10) || 20; state.page = 1; render(); });
+  $("pageSize").addEventListener("change", function (e) {
+    state.pageSize = parseInt(e.target.value, 10) || 25;
+    state.page = 1;
+    render();
+  });
   $("helpBtn").addEventListener("click", function () { loadHelp(); $("helpMask").classList.add("pb-show"); });
   $("helpClose").addEventListener("click", function () { $("helpMask").classList.remove("pb-show"); });
   $("filterApply").addEventListener("click", applyFilter);
