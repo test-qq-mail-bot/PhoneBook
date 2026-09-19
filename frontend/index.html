@@ -312,6 +312,7 @@
     <div class="pb-modal-title" id="editTitle">编辑联系人</div>
     <form class="pb-modal-edit-form" id="editForm"></form>
     <div class="pb-modal-actions">
+      <button class="pb-table-delete-btn" id="editDelete" type="button" style="display:none;">删除联系人</button>
       <button class="pb-btn pb-btn-outline" id="editCancel">取消</button>
       <button class="pb-btn" id="editSave">保存</button>
     </div>
@@ -818,6 +819,7 @@
   function openEdit(contact) {
     state.editIndex = state.contacts.indexOf(contact);
     $("editTitle").textContent = "编辑联系人";
+    $("editDelete").style.display = "inline-flex";
     buildEditForm(contact);
     $("editMask").classList.add("pb-show");
   }
@@ -841,6 +843,7 @@
   function openAdd() {
     state.editIndex = -1;
     $("editTitle").textContent = "新增联系人";
+    $("editDelete").style.display = "none";
     var blank = {};
     state.config.fields.forEach(function (f) { blank[f.key] = ""; });
     buildEditForm(blank);
@@ -1080,6 +1083,11 @@
   $("addBtn").addEventListener("click", openAdd);
   $("editCancel").addEventListener("click", function () { $("editMask").classList.remove("pb-show"); });
   $("editSave").addEventListener("click", saveEdit);
+  $("editDelete").addEventListener("click", function () {
+    if (state.editIndex < 0 || state.editIndex >= state.contacts.length) return;
+    deleteContact(state.contacts[state.editIndex]);
+    if (state.editIndex < 0) $("editMask").classList.remove("pb-show");
+  });
   $("pageSize").addEventListener("change", function (e) {
     state.pageSize = parseInt(e.target.value, 10) || 25;
     state.page = 1;
