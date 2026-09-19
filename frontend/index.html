@@ -1009,6 +1009,7 @@
   function openFilterModal(key) {
     state.filterKey = key;
     var field = state.config.fields.filter(function (f) { return f.key === key; })[0];
+    var fieldIndex = state.config.fields.indexOf(field);
     if (!field) return;
 
     $("filterModalTitle").textContent = "筛选：" + field.label;
@@ -1029,7 +1030,7 @@
     values.sort(function (a, b) { return a.localeCompare(b, "zh-Hans-CN"); });
 
     values.forEach(function (v, idx) {
-      var optionId = "pb-filter-option-" + safeIdPart(key) + "-" + idx;
+      var optionId = "pb-filter-option-" + fieldIndex + "-" + idx;
       var lab = document.createElement("label");
       lab.id = optionId;
       lab.className = "pb-filter-opt";
@@ -1210,9 +1211,9 @@
         tr.id = rowId;
         tr.className = "pb-table-row";
         // demands 4: 字段容错——缺字段显示空白值，可编辑
-        state.config.fields.forEach(function (f) {
+        state.config.fields.forEach(function (f, idx) {
           var td = document.createElement("td");
-          td.id = "contact-cell-" + contactIndex + "-" + safeIdPart(f.key);
+          td.id = "contact-cell-" + contactIndex + "-" + idx + "-" + safeIdPart(f.key);
           td.className = "pb-table-cell";
           td.textContent = c[f.key] == null ? "" : c[f.key];
           tr.appendChild(td);
