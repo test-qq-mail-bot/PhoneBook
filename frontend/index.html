@@ -104,7 +104,7 @@
   .pb-btn:active { transform: translateY(0); }
   .pb-btn:disabled { background: #c8cad0; border-color: #c8cad0; cursor: not-allowed; transform: none; box-shadow: none; }
   .pb-btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--border); }
-  .pb-btn-outline:hover { background: var(--primary-bg); border-color: var(--primary); }
+  .pb-btn-outline:hover { background: var(--primary-light); border-color: var(--primary); }
   .pb-btn-sm { padding: 5px 12px; font-size: 12px; }
 
   .pb-table-wrapper { overflow-x: auto; }
@@ -126,7 +126,7 @@
   .pb-col-filter-btn.pb-active { background: var(--primary); color: #fff; border-color: var(--primary); }
   .pb-table-sort-icon { color: var(--primary); margin-left: 2px; font-size: 11px; font-weight: 700; cursor: pointer; }
   .pb-table-row { transition: background 0.1s; }
-  .pb-table-row:hover { background: var(--primary-bg) !important; }
+  .pb-table-row:hover { background: var(--primary-light) !important; }
   .pb-table-cell {
     padding: 11px 16px; border-bottom: 1px solid var(--border-light);
     max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -196,7 +196,7 @@
   /* 列筛选弹框 */
   .pb-filter-options { display: grid; gap: 8px; margin: 16px 0; max-height: 50vh; overflow: auto; }
   .pb-filter-opt { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text); cursor: pointer; padding: 4px 6px; border-radius: var(--radius-xs); }
-  .pb-filter-opt:hover { background: var(--primary-bg); }
+  .pb-filter-opt:hover { background: var(--primary-light); }
   .pb-filter-opt input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
   .pb-filter-opt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pb-filter-toolbar { margin: 12px 0 4px; }
@@ -219,7 +219,7 @@
   .pb-modal-help-content h3:first-child { margin-top: 4px; }
   .pb-modal-help-content p { margin: 0 0 8px; }
   .pb-modal-help-content code {
-    background: var(--primary-bg); padding: 2px 7px; border-radius: 3px; font-size: 12.5px;
+    background: var(--primary-light); padding: 2px 7px; border-radius: 3px; font-size: 12.5px;
     color: var(--primary); font-family: "Cascadia Code", "Consolas", monospace;
   }
 
@@ -228,7 +228,7 @@
     .pb-header { padding: 16px 18px; }
     .pb-header-title { font-size: 17px; }
     .pb-toolbar, .pb-pagination { padding: 12px 14px; }
-    .pb-table-cell, .pb-table-head-cell { padding: 9px 12px; }
+    .pb-table-cell, .pb-table-head-cell { padding: 8px 12px; }
   }
 </style>
 </head>
@@ -265,7 +265,7 @@
         <thead><tr class="pb-table-head" id="tableHead"></tr></thead>
         <tbody id="tableBody"></tbody>
       </table>
-      <div class="pb-empty-tip" id="emptyTip" style="display:none;">暂无数据</div>
+      <div class="pb-empty-tip" id="emptyTip" style="display:none;">暂无符合条件的数据</div>
     </div>
 
     <div class="pb-pagination">
@@ -307,6 +307,8 @@
     <div class="pb-filter-toolbar">
       <input type="text" id="filterSearch" class="pb-filter-search" placeholder="包含任一关键字，空格分隔" />
       <div class="pb-filter-links">
+        <a id="flAsc">升序</a>
+        <a id="flDesc">降序</a>
         <a id="flAll">全选</a>
         <a id="flInv">反选</a>
         <a id="flDup">重复项</a>
@@ -1000,9 +1002,9 @@
       "<h3>1. 软件简介</h3><p>PhoneBook 是轻量级内部电话通讯录，服务器只提供只读数据，所有编辑在浏览器内存中完成，刷新即恢复。</p>",
       "<h3>2. 查看通讯录</h3><p>页面加载后表格展示全部联系人，下方分页可翻页。</p>",
       "<h3>3. 搜索</h3><p>在搜索框输入关键字，实时跨所有字段过滤，不区分大小写。</p>",
-      "<h3>4. 排序</h3><p>点击表头列名在升序 / 降序之间循环切换。</p>",
+      "<h3>4. 排序</h3><p>默认按“姓名”升序排列；点击任意表头区域可在升序 / 降序之间循环切换。</p>",
       "<h3>5. 列筛选</h3><p>点击表头列的「筛选」按钮打开弹框：顶部输入关键字可实时过滤选项；工具栏「全选 / 反选 / 重复项 / 唯一项」可快速勾选（重复项=本列出现多次的值，唯一项=仅出现一次的值）；勾选要保留的值后点「确定」即按该列过滤，「取消」关闭。清空筛选可先「全选」再「确定」。</p>",
-      "<h3>6. 分页</h3><p>每页条数可选 10/25/50/100，切换后跳回第 1 页；第一页固定在左侧，最后一页固定在右侧，便于快速跳转。</p>",
+      "<h3>6. 分页</h3><p>每页条数可选 10/25/50/100，切换后跳回第 1 页；第一页固定在最左侧，最后一页固定在最右侧，便于快速跳转。</p>",
       "<h3>7. 编辑</h3><p>点「编辑」修改联系人，仅本地生效；点「新增联系人」添加一条。</p>",
       "<h3>8. 导入 / 导出 YAML</h3><p>导出当前数据为标准 contacts.yaml（缺失字段自动以空白值补全）；导入合法文件替换内存数据。导入会校验格式与长度。</p>",
       "<h3>9. 重要提醒</h3><p>本地修改不会保存，刷新即恢复服务器数据；永久修改需导出后联系管理员替换服务器文件。</p>",
