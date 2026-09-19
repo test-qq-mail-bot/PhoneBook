@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: '发布到 Release 的标签名（如 v20260813-V3）。留空则自动使用源代码 version.go 里的版本号。'
+        description: '发布到 Release 的标签名（如 v20260919-V2）。留空则自动使用源代码 version.go 里的版本号。'
         required: false
         default: ''
 
@@ -42,6 +42,12 @@ jobs:
         with:
           go-version: '1.23'
 
+      - name: Run Go tests
+        run: go test ./...
+
+      - name: Run go vet
+        run: go vet ./...
+
       # 本项目前端以 base64 内嵌于 frontend_embed.go（go:embed 不可用）。
       # CI 每次都重新生成，确保二进制一定包含最新的 frontend/index.html，
       # 不依赖你本地是否记得运行脚本；若仓库里的 frontend_embed.go 滞后，
@@ -52,6 +58,19 @@ jobs:
           if ! git diff --quiet frontend_embed.go; then
             echo "::warning::frontend_embed.go 与 frontend/index.html 不同步，已用最新内容重新构建。建议本地运行 python gen_frontend.py 并提交，使仓库内保持一致。"
           fi
+
+      - name: Validate frontend JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html = Path("frontend/index.html").read_text(encoding="utf-8")
+          start = html.find("<script>")
+          end = html.find("</script>", start)
+          if start < 0 or end < 0:
+              raise SystemExit("未找到前端主脚本")
+          Path("/tmp/phonebook-frontend.js").write_text(html[start + len("<script>"):end], encoding="utf-8")
+          PY
+          node --check /tmp/phonebook-frontend.js
 
       # Windows 可执行文件的「详细信息」版本号来自 winres/winres.json，
       # 需先用 go-winres 编译进 rsrc_windows_amd64.syso。
@@ -110,7 +129,26 @@ jobs:
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
+      - name: Check whether release already exists
+        id: release_check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if gh release view "${{ steps.tag.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release ${{ steps.tag.outputs.tag }} 已存在，普通 push 不重复发布。"
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release ${{ steps.tag.outputs.tag }} 不存在，将自动发布。"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Create or update Release
+        if: steps.release_check.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
