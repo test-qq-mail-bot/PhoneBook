@@ -6,7 +6,7 @@
 - 所有编辑（新增/修改联系人、导出 YAML）发生在**浏览器内存**中，刷新页面即恢复服务器数据。
 - 真正的持久化变更由管理员在服务器上手动替换 `config/contacts.yaml` 完成。
 
-当前内置版本号：`20260919-V1`（见 `version.go`）。
+当前内置版本号：`20260919-V2`（见 `version.go`）。
 
 ---
 
@@ -109,7 +109,7 @@ GOOS=linux GOARCH=amd64 go build -o PhoneBook .
 - `PhoneBook`（Linux amd64）
 - `PhoneBook.exe`（Windows amd64）
 
-例如当前版本 `20260919-V1` 会对应 Release 标签 `v20260919-V1`。同一版本后续普通提交不会重复创建 Release；需要重新发布同一版本时，可在 Actions 页面手动执行 `Run workflow` 并填写对应的 `release_tag`。
+例如当前版本 `20260919-V2` 会对应 Release 标签 `v20260919-V2`。同一版本后续普通提交不会重复创建 Release；需要重新发布同一版本时，可在 Actions 页面手动执行 `Run workflow` 并填写对应的 `release_tag`。
 
 本项目的 GitHub Actions 使用 Ubuntu 24.04，并采用 Node.js 24 兼容的官方 Actions；Windows 发布资源按构建步骤动态生成，不提交 `rsrc_windows_amd64.syso`。
 
